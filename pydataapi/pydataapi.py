@@ -72,7 +72,7 @@ class DataApi(AbstractContextManager):
         response: Dict[str, str] = self.client.begin_transaction(**kwargs)
         self._transaction_id = response['transactionId']
 
-        return self.transaction_id
+        return response['transactionId']
 
     def commit_transaction(self, transaction_id: Optional[str] = None, resource_arn: Optional[str] = None,
                            secret_arn: Optional[str] = None):
@@ -134,11 +134,9 @@ class DataApi(AbstractContextManager):
             def create_key_value_result(record) -> Dict:
                 return {header: list(column.values())[0] for header, column in zip(headers, record)}
 
-            result = [create_key_value_result(record) for record in response['records']]
+            return [create_key_value_result(record) for record in response['records']]
         else:
             def create_value_result(record) -> List:
                 return [list(column.values())[0] for column in record]
 
-            result = [create_value_result(record) for record in response['records']]
-
-        return result
+            return [create_value_result(record) for record in response['records']]

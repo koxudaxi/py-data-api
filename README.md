@@ -9,6 +9,7 @@ py-data-api is a user-friendly client which supports SQLAlchemy models.
 https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/data-api.html
 
 
+## Example
 
 ```python
 from sqlalchemy import Column, Integer, String

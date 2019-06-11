@@ -9,6 +9,7 @@ py-data-api is a user-friendly client which supports SQLAlchemy models.
 https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/data-api.html
 
 
+## Example
 
 ```python
 from sqlalchemy import Column, Integer, String
@@ -32,16 +33,14 @@ with DataApi(database='test', resource_arn='arn:aws:rds:us-east-1:123456789012:c
     # start transaction
 
     insert: Insert = Insert(Users, {'name': 'ken'})
-    # INSERT INTO my_table (name) VALUES ('ken')
-
     result = data_api.execute(insert)
+    # INSERT INTO my_table (name) VALUES ('ken')
     print(result)
     # [{'id': 1, 'name': 'ken'}]
 
     query = Query(Users).filter(Users.id == 1)
     result = data_api.execute(query)
     # SELECT users.id, users.name FROM users WHERE my_table.id = 1
-
     print(result)
     # [[1, 'ken']]
 

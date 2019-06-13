@@ -19,7 +19,7 @@ def generate_sql(query: Union[Query, Insert, Update, Delete, Select]) -> str:
     return str(sql)
 
 
-class DataApi(AbstractContextManager):
+class DataAPI(AbstractContextManager):
     def __init__(self, resource_arn: str, secret_arn: str, database: str,
                  transaction_id: Optional[str] = None, client: Optional[boto3.session.Session.client] = None,
                  rollback_exception: Optional[Type[Exception]] = None) -> None:

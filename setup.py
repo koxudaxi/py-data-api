@@ -19,7 +19,7 @@ with open('README.md', 'r') as f:
     readme = f.read()
 
 setup(
-    name='py-data-api',
+    name='pydataapi',
     version=__version__,
     description="py-data-api is a user-friendly client for AWS Aurora Serverless's Data API ",
     long_description=readme,

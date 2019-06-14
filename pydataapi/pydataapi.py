@@ -4,14 +4,19 @@ from typing import Any, Dict, List, Optional, Type, Union
 
 import boto3
 from sqlalchemy.dialects import mysql
+from sqlalchemy.engine import Dialect
 from sqlalchemy.orm.query import Query
 from sqlalchemy.sql import Delete, Insert, Select, Update
 
 Field = Dict[str, Any]
+ROW = List[Any]
+ROW_DICT = Dict[str, Any]
+
+DIALECT: Dialect = mysql.dialect(paramstyle='named')
 
 
 def generate_sql(query: Union[Query, Insert, Update, Delete, Select]) -> str:
-    kwargs = {'dialect': mysql.dialect(paramstyle='named'), 'compile_kwargs': {"literal_binds": True}}
+    kwargs = {'dialect': DIALECT, 'compile_kwargs': {"literal_binds": True}}
     if hasattr(query, 'statement'):
         sql: str = query.statement.compile(**kwargs)
     else:
@@ -34,10 +39,6 @@ def convert_value(value: Any) -> Dict[str, Any]:
         return {'isNull': True}
     else:
         raise Exception(f'unsupported type {type(value)}: {value} ')
-
-
-ROW = List[Any]
-ROW_DICT = Dict[str, Any]
 
 
 def create_sql_parameters(parameter: Dict[str, Any]) -> List[Dict[str, Union[str, Dict]]]:

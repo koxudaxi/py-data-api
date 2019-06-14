@@ -3,7 +3,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Query
 from sqlalchemy.sql import Insert
 
-from pydataapi.pydataapi import DataAPI
+from pydataapi import DataAPI
 
 
 class Users(declarative_base()):

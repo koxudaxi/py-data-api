@@ -8,7 +8,12 @@ py-data-api is a user-friendly client which supports SQLAlchemy models.
 https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/data-api.html
 
 ## This project is an experimental phase.
-Warning: Some interface will be change.
+Warning: Some interface will be changed.
+
+## How to install
+```bash
+$ pip install pydataapi
+```
 
 ## Example
 
@@ -18,7 +23,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Query
 from sqlalchemy.sql import Insert
 
-from pydataapi.pydataapi import DataAPI
+from pydataapi import DataAPI
 
 
 class Users(declarative_base()):
@@ -81,7 +86,6 @@ with DataAPI(database=database, resource_arn=resource_arn, secret_arn=secret_arn
 
 
 ## TODO
-- upload to pypi for pip
 - add unittests
 - add documents include docstrings
 - add simply function client

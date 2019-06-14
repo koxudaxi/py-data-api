@@ -17,7 +17,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Query
 from sqlalchemy.sql import Insert
 
-from pydataapi.pydataapi import DataApi
+from pydataapi.pydataapi import DataAPI
 
 
 class Users(declarative_base()):
@@ -27,7 +27,7 @@ class Users(declarative_base()):
 
 
 
-with DataApi(database='test', resource_arn='arn:aws:rds:us-east-1:123456789012:cluster:serverless-test-1',
+with DataAPI(database='test', resource_arn='arn:aws:rds:us-east-1:123456789012:cluster:serverless-test-1',
              secret_arn='arn:aws:secretsmanager:us-east-1:123456789012:secret:serverless-test1') as data_api:
 
     # start transaction

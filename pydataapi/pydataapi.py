@@ -1,21 +1,52 @@
 from contextlib import AbstractContextManager
-
-from typing import Optional, Dict, Any, Type, Union, List
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Type, Union
 
 import boto3
-
 from sqlalchemy.dialects import mysql
 from sqlalchemy.orm.query import Query
-from sqlalchemy.sql import Insert, Update, Delete, Select
+from sqlalchemy.sql import Delete, Insert, Select, Update
+
+Field = Dict[str, Any]
+
 
 
 def generate_sql(query: Union[Query, Insert, Update, Delete, Select]) -> str:
-    kwargs = {'dialect': mysql.dialect(), 'compile_kwargs': {"literal_binds": True}}
+    kwargs = {'dialect': mysql.dialect(paramstyle='named'), 'compile_kwargs': {"literal_binds": True}}
     if hasattr(query, 'statement'):
         sql: str = query.statement.compile(**kwargs)
     else:
         sql = query.compile(**kwargs)
+        print(sql)
     return str(sql)
+
+
+def convert_value(value: Any) -> Dict[str, Any]:
+    # TODO: support BlobValue
+    if isinstance(value, bool):
+        return {'booleanValue': value}
+    elif isinstance(value, str):
+        return {'stringValue': value}
+    elif isinstance(value, int):
+        return {'longValue': value}
+    elif isinstance(value, float):
+        return {'doubleValue': value}
+    elif value is None:
+        return {'isNull': True}
+    else:
+        raise Exception(f'unsupported type {type(value)}: {value} ')
+
+ROW = List[Any]
+ROW_DICT = Dict[str, Any]
+
+def create_sql_parameters(parameter: Dict[str, Any]) -> List[Dict[str, Union[str, Dict]]]:
+    return [{'name': key, 'value': convert_value(value)} for key, value in parameter.items()]
+
+
+@dataclass
+class Result:
+    generated_fields: Optional[List[Union[str, int, float]]] = None
+    number_of_records_updated: Optional[int] = None
 
 
 class DataAPI(AbstractContextManager):
@@ -60,8 +91,8 @@ class DataAPI(AbstractContextManager):
     def begin(self, database: Optional[str] = None, resource_arn: Optional[str] = None,
               schema: Optional[str] = None, secret_arn: Optional[str] = None) -> str:
         kwargs: Dict[str, Any] = {
-          'resourceArn': resource_arn or self.resource_arn,
-          'secretArn': secret_arn or self.secret_arn,
+            'resourceArn': resource_arn or self.resource_arn,
+            'secretArn': secret_arn or self.secret_arn,
         }
         if database or self.database:
             kwargs['database'] = database or self.database
@@ -76,9 +107,9 @@ class DataAPI(AbstractContextManager):
     def commit(self, transaction_id: Optional[str] = None, resource_arn: Optional[str] = None,
                secret_arn: Optional[str] = None):
         kwargs: Dict[str, Any] = {
-          'resourceArn': resource_arn or self.resource_arn,
-          'secretArn': secret_arn or self.secret_arn,
-          'transactionId': transaction_id or self.transaction_id
+            'resourceArn': resource_arn or self.resource_arn,
+            'secretArn': secret_arn or self.secret_arn,
+            'transactionId': transaction_id or self.transaction_id
 
         }
 
@@ -88,25 +119,27 @@ class DataAPI(AbstractContextManager):
     def rollback(self, transaction_id: Optional[str] = None, resource_arn: Optional[str] = None,
                  secret_arn: Optional[str] = None):
         kwargs: Dict[str, Any] = {
-          'resourceArn': resource_arn or self.resource_arn,
-          'secretArn': secret_arn or self.secret_arn,
-          'transactionId': transaction_id or self.transaction_id
+            'resourceArn': resource_arn or self.resource_arn,
+            'secretArn': secret_arn or self.secret_arn,
+            'transactionId': transaction_id or self.transaction_id
 
         }
 
         response: Dict[str, str] = self.client.rollback_transaction(**kwargs)
         self._transaction_status = response['transactionStatus']
 
-    def execute(self, query: Union[Query, Insert, Update, str], with_columns: bool = False,
-                transaction_id: Optional[str] = None, continue_after_timeout: bool = True,
-                resource_arn: Optional[str] = None, secret_arn: Optional[str] = None,
-                database: Optional[str] = None) -> Union[int, List[Union[List, Dict[str, Any]]]]:
+    def execute(self, query: Union[Query, Insert, Update, Delete, Select, str],
+                parameters: Union[None, Dict[str, Any], List[Dict[str, Any]]] = None,
+                with_columns: bool = False,
+                transaction_id: Optional[str] = None,
+                continue_after_timeout: bool = True,
+                resource_arn: Optional[str] = None,
+                secret_arn: Optional[str] = None,
+                database: Optional[str] = None) -> Union[Result, List[Result], List[ROW], List[ROW_DICT]]:
 
         kwargs: Dict[str, Any] = {
-          'resourceArn': resource_arn or self.resource_arn,
-          'secretArn': secret_arn or self.secret_arn,
-          'continueAfterTimeout': continue_after_timeout
-
+            'resourceArn': resource_arn or self.resource_arn,
+            'secretArn': secret_arn or self.secret_arn,
         }
 
         if transaction_id or self.transaction_id:
@@ -119,13 +152,27 @@ class DataAPI(AbstractContextManager):
         else:
             sql = query
 
-        response: Dict[str, Any] = self._client.execute_statement(
-                includeResultMetadata=with_columns,
+        # batch
+        if isinstance(parameters, List):
+            sql_parameter_set: List[List[Field]] = [create_sql_parameters(parameter) for parameter in parameters]
+            response: Dict[str, Any] = self._client.batch_execute_statement(
                 sql=sql,
+                parameterSets=sql_parameter_set,
                 **kwargs
             )
+            return [Result(generated_fields=[list(f.values())[0] for f in r['generatedFields']])
+                    for r in response['updateResults'] if 'generatedFields' in r]
+
+        if continue_after_timeout:
+            kwargs['continueAfterTimeout'] = continue_after_timeout
+
+        if isinstance(parameters, Dict):
+            sql_parameters: List[Field] = create_sql_parameters(parameters)
+            kwargs['parameters'] = sql_parameters
+
+        response = self._client.execute_statement(includeResultMetadata=with_columns, sql=sql, **kwargs)
         if 'records' not in response:
-            return response['numberOfRecordsUpdated']
+            return Result(number_of_records_updated=response['numberOfRecordsUpdated'])
 
         if with_columns:
             headers = [meta['label'] for meta in response['columnMetadata']]

@@ -25,7 +25,7 @@ with DataAPI(database=database, resource_arn=resource_arn, secret_arn=secret_arn
 
     result = data_api.execute(insert)
     print(result)
-    # [{'id': 1, 'name': 'ken'}]
+    # Result(generated_fields=None, number_of_records_updated=1)
 
     query = Query(Users).filter(Users.id == 1)
     result = data_api.execute(query)
@@ -38,4 +38,14 @@ with DataAPI(database=database, resource_arn=resource_arn, secret_arn=secret_arn
     print(result)
     # [{'id': 1, 'name': 'ken'}]
 
-    # commit transaction
+    # batch insert
+    insert: Insert = Insert(Users)
+    data_api.execute(insert, [
+        {'id': 2, 'name': 'rei'},
+        {'id': 3, 'name': 'lisa'},
+        {'id': 4, 'name': 'taro'},
+    ])
+
+    result = data_api.execute('select * from users')
+    print(result)
+    # [[1, 'ken'], [2, 'rei'], [3, 'lisa'], [4, 'taro']]

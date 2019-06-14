@@ -15,7 +15,6 @@ def generate_sql(query: Union[Query, Insert, Update, Delete, Select]) -> str:
         sql: str = query.statement.compile(**kwargs)
     else:
         sql = query.compile(**kwargs)
-    print(str(sql))
     return str(sql)
 
 
@@ -33,18 +32,18 @@ class DataAPI(AbstractContextManager):
         self._rollback_exception: Optional[Type[Exception]] = rollback_exception
 
     def __enter__(self):
-        self.begin_transaction()
+        self.begin()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is None:
-            self.commit_transaction()
+            self.commit()
         else:
             if self._rollback_exception:
                 if isinstance(exc_type, self._rollback_exception):
-                    self.rollback_transaction()
+                    self.rollback()
             else:
-                self.rollback_transaction()
+                self.rollback()
 
     @property
     def client(self) -> boto3.session.Session.client:
@@ -58,8 +57,8 @@ class DataAPI(AbstractContextManager):
     def transaction_status(self) -> Optional[str]:
         return self._transaction_status
 
-    def begin_transaction(self, database: Optional[str] = None, resource_arn: Optional[str] = None,
-                          schema: Optional[str] = None, secret_arn: Optional[str] = None) -> str:
+    def begin(self, database: Optional[str] = None, resource_arn: Optional[str] = None,
+              schema: Optional[str] = None, secret_arn: Optional[str] = None) -> str:
         kwargs: Dict[str, Any] = {
           'resourceArn': resource_arn or self.resource_arn,
           'secretArn': secret_arn or self.secret_arn,
@@ -74,8 +73,8 @@ class DataAPI(AbstractContextManager):
 
         return response['transactionId']
 
-    def commit_transaction(self, transaction_id: Optional[str] = None, resource_arn: Optional[str] = None,
-                           secret_arn: Optional[str] = None):
+    def commit(self, transaction_id: Optional[str] = None, resource_arn: Optional[str] = None,
+               secret_arn: Optional[str] = None):
         kwargs: Dict[str, Any] = {
           'resourceArn': resource_arn or self.resource_arn,
           'secretArn': secret_arn or self.secret_arn,
@@ -86,8 +85,8 @@ class DataAPI(AbstractContextManager):
         response: Dict[str, str] = self.client.commit_transaction(**kwargs)
         self._transaction_status = response['transactionStatus']
 
-    def rollback_transaction(self, transaction_id: Optional[str] = None, resource_arn: Optional[str] = None,
-                             secret_arn: Optional[str] = None):
+    def rollback(self, transaction_id: Optional[str] = None, resource_arn: Optional[str] = None,
+                 secret_arn: Optional[str] = None):
         kwargs: Dict[str, Any] = {
           'resourceArn': resource_arn or self.resource_arn,
           'secretArn': secret_arn or self.secret_arn,

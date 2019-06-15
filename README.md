@@ -1,6 +1,7 @@
 # py-data-api - Data API Client for Python
 
 [![Build Status](https://travis-ci.org/koxudaxi/py-data-api.svg?branch=master)](https://travis-ci.org/koxudaxi/py-data-api)
+[![PyPI version](https://badge.fury.io/py/pydataapi.svg)](https://badge.fury.io/py/pydataapi)
 
 py-data-api is a user-friendly client which supports SQLAlchemy models.
 

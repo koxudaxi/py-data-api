@@ -12,6 +12,7 @@ https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/data-api.html
 Warning: Some interface will be changed.
 
 ## How to install
+pydataapi requires Python 3.7.0 or later 
 ```bash
 $ pip install pydataapi
 ```
@@ -73,6 +74,7 @@ with DataAPI(database=database, resource_arn=resource_arn, secret_arn=secret_arn
     # commit transaction
 ```
 
+## 
 ## Features
 ### Implemented
 - `BeginTransaction`  - core  
@@ -97,3 +99,19 @@ with DataAPI(database=database, resource_arn=resource_arn, secret_arn=secret_arn
 DataAPI Server for local 
 
 https://github.com/koxudaxi/local-data-api
+
+## Docker Image 
+
+[https://hub.docker.com/r/koxudaxi/py-data-api](https://hub.docker.com/r/koxudaxi/py-data-api)
+
+## Source Code
+
+[https://github.com/koxudaxi/py-data-api](https://github.com/koxudaxi/py-data-api)
+
+## Documentation
+
+[https://koxudaxi.github.io/py-data-api](https://koxudaxi.github.io/py-data-api)
+
+## License
+
+py-data-api is released under the MIT License. http://www.opensource.org/licenses/mit-license

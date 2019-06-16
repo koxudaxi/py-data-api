@@ -6,8 +6,20 @@ python:
 install:
   - pip install -r requirements.txt
   - pip install -r requirements-test.txt
+  - pip install mkdocs mkdocs-material
+
+cache: pip
 
 script:
   - flake8 --max-line-length 119 pydataapi
   - mypy --ignore-missing-imports pydataapi
 #  - nosetests -v tests
+  - cp README.md docs/index.md && mkdocs build --verbose --clean --strict
+
+deploy:
+  provider: pages
+  skip_cleanup: true
+  github_token: $GITHUB_TOKEN
+  local_dir: site
+  on:
+    branch: master

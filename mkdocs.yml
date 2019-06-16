@@ -1,0 +1,21 @@
+site_name: py-data-api
+site_description: A user-friendly client for AWS Aurora Serverless's Data API
+
+theme:
+    name: 'material'
+    palette:
+      primary: 'light blue'
+      accent: 'light blue'
+
+markdown_extensions:
+  - codehilite
+
+repo_name: koxudaxi/py-data-api
+repo_url: https://github.com/koxudaxi/py-data-api
+
+google_analytics:
+    - 'UA-142130505-1'
+    - 'auto'
+
+nav:
+    - py-data-api: 'index.md'

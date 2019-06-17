@@ -17,9 +17,16 @@ script:
   - cp README.md docs/index.md && mkdocs build --verbose --clean --strict
 
 deploy:
-  provider: pages
-  skip_cleanup: true
-  github_token: $GITHUB_TOKEN
-  local_dir: site
-  on:
-    branch: master
+  - provider: pages
+    skip_cleanup: true
+    github_token: $GITHUB_TOKEN
+    local_dir: site
+    on:
+      branch: master
+  - provider: pypi
+    user: $PYPI_USERNAME
+    password: $PYPI_PASSWORD
+    skip_existing: true
+    distributions: "sdist bdist_wheel"
+    on:
+      tags: true

@@ -35,7 +35,7 @@ def convert_value(value: Any) -> Dict[str, Any]:
         return {'longValue': value}
     elif isinstance(value, float):
         return {'doubleValue': value}
-    elif issubclass(value, bytes):
+    elif isinstance(value, bytes):
         return {'blobValue': value}
     elif value is None:
         return {'isNull': True}

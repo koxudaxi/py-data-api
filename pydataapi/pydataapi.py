@@ -120,7 +120,7 @@ class DataAPI(AbstractContextManager):
         response: Dict[str, str] = self.client.commit_transaction(**kwargs)
         self._transaction_status = response['transactionStatus']
 
-        return self.transaction_status
+        return self._transaction_status
 
     def rollback(self, transaction_id: Optional[str] = None, resource_arn: Optional[str] = None,
                  secret_arn: Optional[str] = None) -> str:
@@ -134,7 +134,7 @@ class DataAPI(AbstractContextManager):
         response: Dict[str, str] = self.client.rollback_transaction(**kwargs)
         self._transaction_status = response['transactionStatus']
 
-        return self.transaction_status
+        return self._transaction_status
 
     def execute(self, query: Union[Query, Insert, Update, Delete, Select, str],
                 parameters: Union[None, Dict[str, Any], List[Dict[str, Any]]] = None,
@@ -163,7 +163,7 @@ class DataAPI(AbstractContextManager):
         # batch
         if isinstance(parameters, List):
             sql_parameter_set: List[List[Field]] = [create_sql_parameters(parameter) for parameter in parameters]
-            response: Dict[str, Any] = self._client.batch_execute_statement(
+            response: Dict[str, Any] = self.client.batch_execute_statement(
                 sql=sql,
                 parameterSets=sql_parameter_set,
                 **kwargs
@@ -178,7 +178,7 @@ class DataAPI(AbstractContextManager):
             sql_parameters: List[Field] = create_sql_parameters(parameters)
             kwargs['parameters'] = sql_parameters
 
-        response = self._client.execute_statement(includeResultMetadata=with_columns, sql=sql, **kwargs)
+        response = self.client.execute_statement(includeResultMetadata=with_columns, sql=sql, **kwargs)
         if 'records' not in response:
             return [Result(number_of_records_updated=response['numberOfRecordsUpdated'])]
 
@@ -201,7 +201,7 @@ def transaction(resource_arn: str, secret_arn: str, database: Optional[str] = No
                 rollback_exception: Optional[Type[Exception]] = None) -> Callable:
     def get_func(func: Callable):
         @wraps(func)
-        def wrap(*args: ..., **kwargs: ...) -> Any:
+        def wrap(*args: Any, **kwargs: Any) -> Any:
             with DataAPI(resource_arn, secret_arn, database, transaction_id, client, rollback_exception) as data_api:
                 result: Any = func(data_api, *args, **kwargs)
             return result

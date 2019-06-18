@@ -1,5 +1,6 @@
-from .pydataapi import DataAPI
+from .pydataapi import DataAPI, transaction
 
-__version__ = '0.0.2'
+__version__ = '0.0.3'
 
-__all__ = ['DataAPI', __version__]
+__all__ = ['DataAPI', 'transaction', __version__]
+

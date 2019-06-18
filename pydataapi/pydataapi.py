@@ -1,6 +1,8 @@
+from __future__ import annotations
 from contextlib import AbstractContextManager
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Type, Union
+from functools import wraps
+from typing import Any, Dict, List, Optional, Type, Union, Callable
 
 import boto3
 from sqlalchemy.dialects import mysql
@@ -21,12 +23,10 @@ def generate_sql(query: Union[Query, Insert, Update, Delete, Select]) -> str:
         sql: str = query.statement.compile(**kwargs)
     else:
         sql = query.compile(**kwargs)
-        print(sql)
     return str(sql)
 
 
 def convert_value(value: Any) -> Dict[str, Any]:
-    # TODO: support BlobValue
     if isinstance(value, bool):
         return {'booleanValue': value}
     elif isinstance(value, str):
@@ -35,6 +35,8 @@ def convert_value(value: Any) -> Dict[str, Any]:
         return {'longValue': value}
     elif isinstance(value, float):
         return {'doubleValue': value}
+    elif issubclass(value, bytes):
+        return {'blobValue': value}
     elif value is None:
         return {'isNull': True}
     else:
@@ -52,19 +54,19 @@ class Result:
 
 
 class DataAPI(AbstractContextManager):
-    def __init__(self, resource_arn: str, secret_arn: str, database: str,
+    def __init__(self, resource_arn: str, secret_arn: str, database: Optional[str] = None,
                  transaction_id: Optional[str] = None, client: Optional[boto3.session.Session.client] = None,
                  rollback_exception: Optional[Type[Exception]] = None) -> None:
         self.resource_arn: str = resource_arn
-        self.secret_arn = secret_arn
-        self.database: str = database
+        self.secret_arn: str = secret_arn
+        self.database: Optional[str] = database
 
-        self._transaction_id = transaction_id
-        self._client = client or boto3.client('rds-data')
+        self._transaction_id: Optional[str] = transaction_id
+        self._client: Optional[boto3.session.Session.client] = client
         self._transaction_status: Optional[str] = None
         self._rollback_exception: Optional[Type[Exception]] = rollback_exception
 
-    def __enter__(self):
+    def __enter__(self) -> DataAPI:
         self.begin()
         return self
 
@@ -107,7 +109,7 @@ class DataAPI(AbstractContextManager):
         return response['transactionId']
 
     def commit(self, transaction_id: Optional[str] = None, resource_arn: Optional[str] = None,
-               secret_arn: Optional[str] = None):
+               secret_arn: Optional[str] = None) -> str:
         kwargs: Dict[str, Any] = {
             'resourceArn': resource_arn or self.resource_arn,
             'secretArn': secret_arn or self.secret_arn,
@@ -118,8 +120,10 @@ class DataAPI(AbstractContextManager):
         response: Dict[str, str] = self.client.commit_transaction(**kwargs)
         self._transaction_status = response['transactionStatus']
 
+        return self.transaction_status
+
     def rollback(self, transaction_id: Optional[str] = None, resource_arn: Optional[str] = None,
-                 secret_arn: Optional[str] = None):
+                 secret_arn: Optional[str] = None) -> str:
         kwargs: Dict[str, Any] = {
             'resourceArn': resource_arn or self.resource_arn,
             'secretArn': secret_arn or self.secret_arn,
@@ -130,6 +134,8 @@ class DataAPI(AbstractContextManager):
         response: Dict[str, str] = self.client.rollback_transaction(**kwargs)
         self._transaction_status = response['transactionStatus']
 
+        return self.transaction_status
+
     def execute(self, query: Union[Query, Insert, Update, Delete, Select, str],
                 parameters: Union[None, Dict[str, Any], List[Dict[str, Any]]] = None,
                 with_columns: bool = False,
@@ -137,7 +143,7 @@ class DataAPI(AbstractContextManager):
                 continue_after_timeout: bool = True,
                 resource_arn: Optional[str] = None,
                 secret_arn: Optional[str] = None,
-                database: Optional[str] = None) -> Union[Result, List[Result], List[ROW], List[ROW_DICT]]:
+                database: Optional[str] = None) -> Union[List[Result], List[ROW], List[ROW_DICT]]:
 
         kwargs: Dict[str, Any] = {
             'resourceArn': resource_arn or self.resource_arn,
@@ -150,7 +156,7 @@ class DataAPI(AbstractContextManager):
         if database or self.database:
             kwargs['database'] = database or self.database
         if not isinstance(query, str):
-            sql = generate_sql(query)
+            sql: str = generate_sql(query)
         else:
             sql = query
 
@@ -174,7 +180,7 @@ class DataAPI(AbstractContextManager):
 
         response = self._client.execute_statement(includeResultMetadata=with_columns, sql=sql, **kwargs)
         if 'records' not in response:
-            return Result(number_of_records_updated=response['numberOfRecordsUpdated'])
+            return [Result(number_of_records_updated=response['numberOfRecordsUpdated'])]
 
         if with_columns:
             headers = [meta['label'] for meta in response['columnMetadata']]
@@ -188,3 +194,16 @@ class DataAPI(AbstractContextManager):
                 return [list(column.values())[0] for column in record]
 
             return [create_value_result(record) for record in response['records']]
+
+
+def transaction(resource_arn: str, secret_arn: str, database: Optional[str] = None,
+                transaction_id: Optional[str] = None, client: Optional[boto3.session.Session.client] = None,
+                rollback_exception: Optional[Type[Exception]] = None) -> Callable:
+    def get_func(func: Callable):
+        @wraps(func)
+        def wrap(*args: ..., **kwargs: ...) -> Any:
+            with DataAPI(resource_arn, secret_arn, database, transaction_id, client, rollback_exception) as data_api:
+                result: Any = func(data_api, *args, **kwargs)
+            return result
+        return wrap
+    return get_func

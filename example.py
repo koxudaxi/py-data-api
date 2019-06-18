@@ -47,7 +47,7 @@ def example_with_statement():
         # start transaction
 
         insert: Insert = Insert(Users, {'name': 'ken'})
-        # INSERT INTO my_table (name) VALUES ('ken')
+        # INSERT INTO users (name) VALUES ('ken')
 
         result = data_api.execute(insert)
         print(result)
@@ -55,7 +55,7 @@ def example_with_statement():
 
         query = Query(Users).filter(Users.id == 1)
         result = data_api.execute(query)
-        # SELECT users.id, users.name FROM users WHERE my_table.id = 1
+        # SELECT users.id, users.name FROM users WHERE users.id = 1
 
         print(result)
         # [[1, 'ken']]

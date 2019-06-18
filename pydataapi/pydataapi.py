@@ -62,7 +62,7 @@ class DataAPI(AbstractContextManager):
         self.database: Optional[str] = database
 
         self._transaction_id: Optional[str] = transaction_id
-        self._client: Optional[boto3.session.Session.client] = client
+        self._client: boto3.session.Session.client = client or boto3.client('rds-data')
         self._transaction_status: Optional[str] = None
         self._rollback_exception: Optional[Type[Exception]] = rollback_exception
 

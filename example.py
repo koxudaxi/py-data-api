@@ -30,8 +30,10 @@ def add_users(data_api: DataAPI, user_names: List[str]) -> None:
 
 
 def example_simple_execute():
-    data_api = DataAPI(resource_arn, secret_arn)
-    data_api.execute('show tables')
+    data_api = DataAPI(resource_arn, secret_arn, database=database)
+    result = data_api.execute('show tables')
+    print(result)
+    # [[Persons, Users, Pets]]
 
 
 def example_decorator():
@@ -97,6 +99,4 @@ def example_rollback_with_custom_exception():
         raise OriginalError  # rollback
 
         # raise Exception <- DataAPI don't rollback
-
-
 

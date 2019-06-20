@@ -52,6 +52,12 @@ class Result:
     generated_fields: Optional[List[Union[str, int, float]]] = None
     number_of_records_updated: Optional[int] = None
 
+    @property
+    def generated_fields_first(self) -> Optional[Union[str, int, float]]:
+        if self.generated_fields:
+            return self.generated_fields[0]
+        return None
+
 
 class DataAPI(AbstractContextManager):
     def __init__(self, resource_arn: str, secret_arn: str, database: Optional[str] = None,

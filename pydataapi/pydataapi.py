@@ -1,10 +1,11 @@
 from __future__ import annotations
 from contextlib import AbstractContextManager
-from dataclasses import dataclass
+
 from functools import wraps
 from typing import Any, Dict, List, Optional, Type, Union, Callable
 
 import boto3
+from pydantic.dataclasses import dataclass
 from sqlalchemy.dialects import mysql
 from sqlalchemy.engine import Dialect
 from sqlalchemy.orm.query import Query
@@ -51,6 +52,12 @@ def create_sql_parameters(parameter: Dict[str, Any]) -> List[Dict[str, Union[str
 class Result:
     generated_fields: Optional[List[Union[str, int, float]]] = None
     number_of_records_updated: Optional[int] = None
+
+    @property
+    def generated_fields_first(self) -> Optional[str, int, float]:
+        if self.generated_fields:
+            return self.generated_fields[0]
+        return None
 
 
 class DataAPI(AbstractContextManager):

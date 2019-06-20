@@ -54,7 +54,7 @@ class Result:
     number_of_records_updated: Optional[int] = None
 
     @property
-    def generated_fields_first(self) -> Optional[str, int, float]:
+    def generated_fields_first(self) -> Optional[Union[str, int, float]]:
         if self.generated_fields:
             return self.generated_fields[0]
         return None

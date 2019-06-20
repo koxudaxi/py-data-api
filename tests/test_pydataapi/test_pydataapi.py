@@ -75,8 +75,9 @@ class TestDataAPI(TestCase):
                              call(database='test', resourceArn='dummy', schema='schema', secretArn='dummy'))
 
     def test_transaction(self) -> None:
-        data_api = DataAPI(resource_arn='dummy', secret_arn='dummy', transaction_id='abc')
-        self.assertEqual(data_api.transaction_id, 'abc')
+        with patch('boto3.client'):
+            data_api = DataAPI(resource_arn='dummy', secret_arn='dummy', transaction_id='abc')
+            self.assertEqual(data_api.transaction_id, 'abc')
 
     def test_commit(self) -> None:
         with patch('boto3.client') as mock_client:

@@ -176,7 +176,7 @@ class DataAPI(AbstractContextManager):
                 **kwargs
             )
             return [Result(generated_fields=[list(f.values())[0] for f in r['generatedFields']])
-                    for r in response['updateResults'] if 'generatedFields' in r]
+                    for r in response['updateResults'] if 'generatedFields' in r]  # type: ignore
 
         if continue_after_timeout:
             kwargs['continueAfterTimeout'] = continue_after_timeout
@@ -187,7 +187,7 @@ class DataAPI(AbstractContextManager):
 
         response = self.client.execute_statement(includeResultMetadata=with_columns, sql=sql, **kwargs)
         if 'records' not in response:
-            return [Result(number_of_records_updated=response['numberOfRecordsUpdated'])]
+            return [Result(number_of_records_updated=response['numberOfRecordsUpdated'])]  # type: ignore
 
         if with_columns:
             headers = [meta['label'] for meta in response['columnMetadata']]

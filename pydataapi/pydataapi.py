@@ -1,11 +1,10 @@
 from __future__ import annotations
 from contextlib import AbstractContextManager
-
+from dataclasses import dataclass
 from functools import wraps
 from typing import Any, Dict, List, Optional, Type, Union, Callable
 
 import boto3
-from pydantic.dataclasses import dataclass
 from sqlalchemy.dialects import mysql
 from sqlalchemy.engine import Dialect
 from sqlalchemy.orm.query import Query

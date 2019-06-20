@@ -12,7 +12,7 @@ cache: pip
 script:
   - flake8 --max-line-length 119 pydataapi
   - mypy --ignore-missing-imports pydataapi
-  - nosetests -v --with-coverage tests
+  - nosetests -v --with-coverage --cover-package=pydataapi --cover-erase tests
   - codecov
   - cp README.md docs/index.md && mkdocs build --verbose --clean --strict
 

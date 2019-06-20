@@ -1,15 +1,15 @@
-
 from unittest import TestCase
+from unittest.mock import Mock, patch, call
 
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Query
 from sqlalchemy.sql import Insert
 
-from pydataapi.pydataapi import convert_value, generate_sql, create_sql_parameters
+from pydataapi.pydataapi import convert_value, generate_sql, create_sql_parameters, DataAPI, Result
 
 
-class DataAPIFunction(TestCase):
+class TestDataAPIFunction(TestCase):
     def setUp(self) -> None:
         pass
 
@@ -24,6 +24,7 @@ class DataAPIFunction(TestCase):
 
         class Dummy:
             pass
+
         with self.assertRaises(Exception):
             convert_value(Dummy())
 
@@ -37,9 +38,9 @@ class DataAPIFunction(TestCase):
         self.assertEqual(generate_sql(insert), "INSERT INTO users (name) VALUES ('ken')")
 
         self.assertEqual(generate_sql(Query(Users).filter(Users.id == 1)),
-                                      "SELECT users.id, users.name \n"
-                                      "FROM users \n"
-                                      "WHERE users.id = 1")
+                         "SELECT users.id, users.name \n"
+                         "FROM users \n"
+                         "WHERE users.id = 1")
 
     def test_create_parameters(self) -> None:
         expected = [{'name': 'int', 'value': {'longValue': 1}}, {'name': 'float', 'value': {'doubleValue': 1.2}},
@@ -48,4 +49,9 @@ class DataAPIFunction(TestCase):
                     {'name': 'bool', 'value': {'booleanValue': True}}, {'name': 'None', 'value': {'isNull': True}}]
 
         self.assertListEqual(create_sql_parameters({'int': 1, 'float': 1.2, 'str': 'str', 'bytes': b'bytes',
-                                                    'bool': True, 'None': None }), expected)
+                                                    'bool': True, 'None': None}), expected)
+
+
+class TestResult(TestCase):
+    def test_generated_fields_first(self) -> None:
+        self.assertEqual(Result(generated_fields=[1, 2, 3]).generated_fields_first, 1)

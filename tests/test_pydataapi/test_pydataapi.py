@@ -116,14 +116,15 @@ class TestDataAPI(TestCase):
                              call(database='test', resourceArn='dummy', schema='schema', secretArn='dummy'))
 
     def test_transaction(self) -> None:
-        with patch('boto3.client'):
-            data_api = DataAPI(resource_arn='dummy', secret_arn='dummy', transaction_id='abc')
+        with patch('boto3.client') as mock_client:
+            data_api = DataAPI(resource_arn='dummy', secret_arn='dummy', transaction_id='abc', client=mock_client)
             self.assertEqual(data_api.transaction_id, 'abc')
 
     def test_transaction_status(self) -> None:
-        data_api = DataAPI(resource_arn='dummy', secret_arn='dummy', transaction_id='abc')
-        data_api._transaction_status = 'dummy status'
-        self.assertEqual(data_api.transaction_status, 'dummy status')
+        with patch('boto3.client') as mock_client:
+            data_api = DataAPI(resource_arn='dummy', secret_arn='dummy', transaction_id='abc', client=mock_client)
+            data_api._transaction_status = 'dummy status'
+            self.assertEqual(data_api.transaction_status, 'dummy status')
 
     def test_commit(self) -> None:
         with patch('boto3.client') as mock_client:

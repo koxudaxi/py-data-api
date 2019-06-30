@@ -81,7 +81,7 @@ class DataAPI(AbstractContextManager):
             self.commit()
         else:
             if self._rollback_exception:
-                if isinstance(exc_type, self._rollback_exception):
+                if issubclass(exc_type, self._rollback_exception):
                     self.rollback()
             else:
                 self.rollback()

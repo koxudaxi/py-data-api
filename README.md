@@ -13,7 +13,7 @@ https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/data-api.html
 Warning: Some interface will be changed.
 
 ## How to install
-pydataapi requires Python 3.7.0 or later 
+pydataapi requires Python 3.6.1 or later 
 ```bash
 $ pip install pydataapi
 ```

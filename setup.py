@@ -1,45 +1,18 @@
-# -*- coding: utf-8 -*-
+#! /usr/bin/env python
+
+from pathlib import Path
 
 from setuptools import setup
+from setuptools.config import read_configuration
 
-from pydataapi import __version__
+config = read_configuration(Path(__file__).parent.joinpath('setup.cfg'))
 
-packages = ['pydataapi']
+extras_require = {
+    'setup': config['options']['setup_requires'],
+    'test': config['options']['tests_require'],
+    **config['options']['extras_require'],
+}
+extras_require['all'] = [*extras_require.values()]
+use_scm_version = {'write_to': Path(config['metadata']['name'].replace('-', ''), 'version.py')}
 
-with open('requirements.txt') as f:
-    requires = f.readlines()
-
-with open('requirements.txt') as f:
-    test_requirements = f.readlines()
-
-with open('LICENSE', 'r') as f:
-    _license = f.read()
-
-with open('README.md', 'r') as f:
-    readme = f.read()
-
-setup(
-    name='pydataapi',
-    version=__version__,
-    description="py-data-api is a user-friendly client for AWS Aurora Serverless's Data API ",
-    long_description=readme,
-    long_description_content_type='text/markdown',
-    author='Koudai Aono',
-    author_email='koxudaxi@gmail.com',
-    url='https://github.com/koxudaxi/py-data-api',
-    packages=packages,
-    data_files=[('', ['LICENSE', 'README.md'])],
-    package_dir={'pydataapi': 'pydataapi'},
-    include_package_data=True,
-    install_requires=requires,
-    zip_safe=False,
-    classifiers=[
-        'Development Status :: 2 - Pre-Alpha',
-        'Natural Language :: English',
-        'License :: OSI Approved :: MIT License',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: Implementation :: CPython',
-    ],
-    tests_require=test_requirements,
-)
+setup(extras_require=extras_require, use_scm_version=use_scm_version)

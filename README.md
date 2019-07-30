@@ -140,7 +140,6 @@ def example_rollback_with_custom_exception():
 
 
 ## TODO
-- add unittests
 - add documents include docstrings
 - add simply function client
 

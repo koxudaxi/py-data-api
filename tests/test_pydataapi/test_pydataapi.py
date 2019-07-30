@@ -78,6 +78,12 @@ class TestDataAPIFunction(TestCase):
 class TestResult(TestCase):
     def test_generated_fields_first(self) -> None:
         self.assertEqual(Result(generated_fields=[1, 2, 3]).generated_fields_first, 1)
+        self.assertEqual(
+            Result(generated_fields=[1.1, 2, 3]).generated_fields_first, 1.1
+        )
+        self.assertEqual(
+            Result(generated_fields=['abc', 2, 3]).generated_fields_first, 'abc'
+        )
 
     def test_generated_fields_first_empty(self) -> None:
         self.assertEqual(Result(generated_fields=[]).generated_fields_first, None)

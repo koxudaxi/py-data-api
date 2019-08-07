@@ -15,13 +15,17 @@ ROW_DICT = Dict[str, Any]
 
 DIALECT: Dialect = mysql.dialect(paramstyle='named')
 
+QUERY_STATEMENT_COMPILE_PARAMS = {
+    'dialect': mysql.dialect(paramstyle='named'),
+    'compile_kwargs': {"literal_binds": True},
+}
+
 
 def generate_sql(query: Union[Query, Insert, Update, Delete, Select]) -> str:
-    kwargs = {'dialect': DIALECT, 'compile_kwargs': {"literal_binds": True}}
     if hasattr(query, 'statement'):
-        sql: str = query.statement.compile(**kwargs)
+        sql: str = query.statement.compile(**QUERY_STATEMENT_COMPILE_PARAMS)
     else:
-        sql = query.compile(**kwargs)
+        sql = query.compile(**QUERY_STATEMENT_COMPILE_PARAMS)
     return str(sql)
 
 

@@ -10,8 +10,8 @@ from sqlalchemy.orm.query import Query
 from sqlalchemy.sql import Delete, Insert, Select, Update
 
 Field = Dict[str, Any]
-ROW = List[Any]
-ROW_DICT = Dict[str, Any]
+Row = List[Any]
+RowDict = Dict[str, Any]
 
 DIALECT: Dialect = mysql.dialect(paramstyle='named')
 
@@ -171,7 +171,7 @@ class DataAPI(AbstractContextManager):
         resource_arn: Optional[str] = None,
         secret_arn: Optional[str] = None,
         database: Optional[str] = None,
-    ) -> Union[List[Result], List[ROW], List[ROW_DICT]]:
+    ) -> Union[List[Result], List[Row], List[RowDict]]:
 
         kwargs: Dict[str, Any] = {
             'resourceArn': resource_arn or self.resource_arn,

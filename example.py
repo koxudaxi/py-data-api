@@ -32,8 +32,8 @@ def add_users(data_api: DataAPI, user_names: List[str]) -> None:
 def example_simple_execute():
     data_api = DataAPI(resource_arn, secret_arn, database=database)
     result = data_api.execute('show tables')
-    print(result)
-    # [[Persons, Users, Pets]]
+    print(list(result))
+    # [(Persons, Users, Pets)]
 
 
 def example_decorator():
@@ -50,18 +50,18 @@ def example_with_statement():
         # INSERT INTO users (name) VALUES ('ken')
 
         result = data_api.execute(insert)
-        print(result)
-        # [Result(generated_fields=None, number_of_records_updated=1)]
+        print(result.number_of_records_updated)
+        # 1
 
         query = Query(Users).filter(Users.id == 1)
         result = data_api.execute(query)
         # SELECT users.id, users.name FROM users WHERE users.id = 1
 
-        print(result)
-        # [[1, 'ken']]
+        print(list(result))
+        # [(1, 'ken')]
 
-        result = data_api.execute('select * from users', with_columns=True)
-        print(result)
+        result = data_api.execute('select * from users')
+        print(result.as_dict())
         # [{'id': 1, 'name': 'ken'}]
 
         # batch insert
@@ -73,8 +73,13 @@ def example_with_statement():
         ])
 
         result = data_api.execute('select * from users')
-        print(result)
-        # [[1, 'ken'], [2, 'rei'], [3, 'lisa'], [4, 'taro']]
+        print(list(result))
+        # [(1, 'ken'), (2, 'rei'), (3, 'lisa'), (4, 'taro')]
+
+        # result is a sequence object
+        for row in result:
+            print(row)
+            # (1, 'ken') ...
 
         # commit
 
@@ -99,4 +104,3 @@ def example_rollback_with_custom_exception():
         raise OriginalError  # rollback
 
         # raise Exception <- DataAPI don't rollback
-

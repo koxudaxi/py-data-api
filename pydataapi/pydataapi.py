@@ -1,16 +1,29 @@
+from abc import abstractmethod
 from contextlib import AbstractContextManager
 from functools import wraps
-from typing import Any, Callable, Dict, List, Optional, Type, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    overload,
+)
 
 import boto3
-from pydantic import BaseModel
 from sqlalchemy.dialects import mysql
 from sqlalchemy.engine import Dialect
 from sqlalchemy.orm.query import Query
 from sqlalchemy.sql import Delete, Insert, Select, Update
 
 Field = Dict[str, Any]
-Row = List[Any]
+Row = Tuple[Any]
 RowDict = Dict[str, Any]
 
 DIALECT: Dialect = mysql.dialect(paramstyle='named')
@@ -54,14 +67,84 @@ def create_sql_parameters(
     ]
 
 
-class Result(BaseModel):
-    generated_fields: Optional[List[Any]] = None
-    number_of_records_updated: Optional[int] = None
+T = TypeVar('T')
+
+
+class Results(Sequence[Tuple]):
+    def __getitem__(  # type: ignore
+        self, i: Union[int, slice]
+    ) -> Union[Tuple, Sequence[Any]]:
+        return tuple(
+            tuple(column.values())[0] for column in self._rows[i]  # type: ignore
+        )
+
+    def __len__(self) -> int:
+        return len(self._rows)
+
+    def __init__(self, response: Dict):
+        self._response = response
+        self._rows: Sequence[Tuple[Dict]] = response.get('records', [])
+        self._column_metadata: List[Dict[str, Any]] = response.get('columnMetadata', [])
+        self._headers: Optional[List[str]] = None
+        self._generated_fields: Optional[List] = None
+        self._generated_fields_list: Optional[List[List]] = None
 
     @property
-    def generated_fields_first(self) -> Optional[Union[str, int, float]]:
+    def number_of_records_updated(self) -> Optional[int]:
+        return self._response.get('numberOfRecordsUpdated')
+
+    @property
+    def headers(self) -> List[str]:
+        if self._headers is None:
+            self._headers = [meta['label'] for meta in self._column_metadata]
+        return self._headers
+
+    def as_dict(self) -> List[Dict[str, Any]]:
+        def create_key_value_result(record: Tuple[Dict]) -> Dict:
+            return {
+                header: list(column.values())[0]
+                for header, column in zip(self.headers, record)
+            }
+
+        return [create_key_value_result(row) for row in self._rows]
+
+    def as_model(self, model_type: Type[T]) -> List[T]:
+        return [model_type(**row) for row in self.as_dict()]  # type: ignore
+
+    @staticmethod
+    def _get_generated_fields(result: Dict[str, List[Dict]]) -> List:
+        return [list(f.values())[0] for f in result['generatedFields']]
+
+    @property
+    def generated_fields(self) -> Optional[List]:
+        if 'generatedFields' in self._response:
+            if self._generated_fields is None:
+                self._generated_fields = self._get_generated_fields(self._response)
+            return self._generated_fields
+        return None
+
+    @property
+    def generated_fields_list(self) -> Optional[List[List]]:
+        if 'updateResults' in self._response:
+            if self._generated_fields is None:
+                self._generated_fields = [
+                    self._get_generated_fields(r)
+                    for r in self._response['updateResults']
+                    if 'generatedFields' in r
+                ]
+            return self._generated_fields
+        return None
+
+    @property
+    def generated_fields_first(self) -> Union[str, int, float, None]:
         if self.generated_fields:
             return self.generated_fields[0]
+        return None
+
+    @property
+    def generated_fields_first_list(self) -> Optional[List[Union[str, int, float]]]:
+        if self.generated_fields_list:
+            return [f[0] for f in self.generated_fields_list]
         return None
 
 
@@ -175,7 +258,7 @@ class DataAPI(AbstractContextManager):
         resource_arn: Optional[str] = None,
         secret_arn: Optional[str] = None,
         database: Optional[str] = None,
-    ) -> Union[List[Result], List[Row], List[RowDict]]:
+    ) -> Union[Results, List[RowDict]]:
 
         kwargs: Dict[str, Any] = {
             'resourceArn': resource_arn or self.resource_arn,
@@ -200,13 +283,7 @@ class DataAPI(AbstractContextManager):
             response: Dict[str, Any] = self.client.batch_execute_statement(
                 sql=sql, parameterSets=sql_parameter_set, **kwargs
             )
-            return [
-                Result(
-                    generated_fields=[list(f.values())[0] for f in r['generatedFields']]
-                )
-                for r in response['updateResults']
-                if 'generatedFields' in r
-            ]
+            return Results(response)
 
         if continue_after_timeout:
             kwargs['continueAfterTimeout'] = continue_after_timeout
@@ -216,29 +293,13 @@ class DataAPI(AbstractContextManager):
             kwargs['parameters'] = sql_parameters
 
         response = self.client.execute_statement(
-            includeResultMetadata=with_columns, sql=sql, **kwargs
+            includeResultMetadata=True, sql=sql, **kwargs
         )
-        if 'records' not in response:
-            return [
-                Result(number_of_records_updated=response['numberOfRecordsUpdated'])
-            ]
+        result = Results(response)
 
         if with_columns:
-            headers = [meta['label'] for meta in response['columnMetadata']]
-
-            def create_key_value_result(record: List[Dict]) -> Dict:
-                return {
-                    header: list(column.values())[0]
-                    for header, column in zip(headers, record)
-                }
-
-            return [create_key_value_result(record) for record in response['records']]
-        else:
-
-            def create_value_result(record: List[Dict]) -> List:
-                return [list(column.values())[0] for column in record]
-
-            return [create_value_result(record) for record in response['records']]
+            return result.as_dict()
+        return result
 
 
 def transaction(

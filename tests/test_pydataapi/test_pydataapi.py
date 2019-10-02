@@ -2,7 +2,8 @@ import pytest
 from pydantic import BaseModel
 from pydataapi.pydataapi import (
     DataAPI,
-    Results,
+    Result,
+    UpdateResults,
     convert_value,
     create_sql_parameters,
     generate_sql,
@@ -79,19 +80,19 @@ def test_create_parameters() -> None:
 
 def test_generated_fields_first() -> None:
     assert (
-        Results(
+        Result(
             {'generatedFields': [{'1': 1}, {'2': 2}, {'3': 3}]}
         ).generated_fields_first
         == 1
     )
     assert (
-        Results(
+        Result(
             {'generatedFields': [{'1': 1.1}, {'2': 2}, {'3': 3}]}
         ).generated_fields_first
         == 1.1
     )
     assert (
-        Results(
+        Result(
             {'generatedFields': [{'1': 'abc'}, {'2': 2}, {'3': 3}]}
         ).generated_fields_first
         == 'abc'
@@ -99,55 +100,44 @@ def test_generated_fields_first() -> None:
 
 
 def test_generated_fields() -> None:
-    assert Results(
+    assert Result(
         {'generatedFields': [{'1': 1}, {'2': 2}, {'3': 3}]}
     ).generated_fields == [1, 2, 3]
-    assert Results(
+    assert Result(
         {'generatedFields': [{'1': 1.1}, {'2': 2}, {'3': 3}]}
     ).generated_fields == [1.1, 2, 3]
-    assert Results(
+    assert Result(
         {'generatedFields': [{'1': 'abc'}, {'2': 2}, {'3': 3}]}
     ).generated_fields == ['abc', 2, 3]
 
 
-def test_generated_fields_first_list() -> None:
-    assert Results(
-        {
-            'updateResults': [
-                {'generatedFields': [{'1': 1}, {'2': 2}, {'3': 3}]},
-                {'generatedFields': [{'4': 4}, {'5': 5}, {'6': 6}]},
-                {'generatedFields': [{'7': 7}, {'8': 8}, {'9': 9}]},
-            ]
-        }
-    ).generated_fields_first_list == [1, 4, 7]
+def test_update_results() -> None:
+    update_results = UpdateResults(
+        [
+            {'generatedFields': [{'1': 1}, {'2': 2}, {'3': 3}]},
+            {'generatedFields': [{'4': 4}, {'5': 5}, {'6': 6}]},
+            {'generatedFields': [{'7': 7}, {'8': 8}, {'9': 9}]},
+        ]
+    )
+    assert update_results[0].generated_fields == [1, 2, 3]
+    assert update_results[0].generated_fields_first == 1
+    assert update_results[1].generated_fields == [4, 5, 6]
+    assert update_results[1].generated_fields_first == 4
+    assert update_results[2].generated_fields == [7, 8, 9]
+    assert update_results[2].generated_fields_first == 7
 
-
-def test_generated_fields_list() -> None:
-    assert Results(
-        {
-            'updateResults': [
-                {'generatedFields': [{'1': 1}, {'2': 2}, {'3': 3}]},
-                {'generatedFields': [{'4': 4}, {'5': 5}, {'6': 6}]},
-                {'generatedFields': [{'7': 7}, {'8': 8}, {'9': 9}]},
-            ]
-        }
-    ).generated_fields_list == [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
-
-
-def test_generated_fields_first_empty() -> None:
-    assert Results({}).generated_fields_first is None
-
-
-def test_generated_fields_first_list_empty() -> None:
-    assert Results({}).generated_fields_first_list is None
+    empty = UpdateResults([{'generatedFields': []}])
+    assert len(empty) == 1
+    assert empty[0].generated_fields == []
+    assert empty[0].generated_fields_first is None
 
 
 def test_generated_fields_empty() -> None:
-    assert Results({}).generated_fields is None
+    assert Result({}).generated_fields == []
 
 
-def test_generated_fields_list_empty() -> None:
-    assert Results({}).generated_fields_list is None
+def test_generated_fields_first_empty() -> None:
+    assert Result({}).generated_fields_first is None
 
 
 def test_client(mocker) -> None:
@@ -343,62 +333,7 @@ def test_execute_select(mocked_client, mocker) -> None:
     data_api = DataAPI(
         resource_arn='dummy', secret_arn='dummy', database='test', client=mocked_client
     )
-    assert list(data_api.execute("select * from pets")) == [(1, 'cat')]
-    assert mocked_client.execute_statement.call_args == mocker.call(
-        continueAfterTimeout=True,
-        database='test',
-        includeResultMetadata=True,
-        resourceArn='dummy',
-        secretArn='dummy',
-        sql='select * from pets',
-    )
-
-
-def test_execute_select_include_metadata(mocked_client, mocker) -> None:
-    mocked_client.execute_statement.return_value = {
-        "columnMetadata": [
-            {
-                "arrayBaseColumnType": 0,
-                "isAutoIncrement": False,
-                "isCaseSensitive": False,
-                "isCurrency": False,
-                "isSigned": True,
-                "label": "id",
-                "name": "id",
-                "nullable": 1,
-                "precision": 11,
-                "scale": 0,
-                "schemaName": "",
-                "tableName": "users",
-                "type": 4,
-                "typeName": "INT",
-            },
-            {
-                "arrayBaseColumnType": 0,
-                "isAutoIncrement": False,
-                "isCaseSensitive": False,
-                "isCurrency": False,
-                "isSigned": False,
-                "label": "name",
-                "name": "name",
-                "nullable": 1,
-                "precision": 255,
-                "scale": 0,
-                "schemaName": "",
-                "tableName": "users",
-                "type": 12,
-                "typeName": "VARCHAR",
-            },
-        ],
-        'numberOfRecordsUpdated': 0,
-        'records': [[{'longValue': 1}, {'stringValue': 'cat'}]],
-    }
-    data_api = DataAPI(
-        resource_arn='dummy', secret_arn='dummy', database='test', client=mocked_client
-    )
-    assert data_api.execute("select * from pets", with_columns=True) == [
-        {'id': 1, 'name': 'cat'}
-    ]
+    assert list(data_api.execute("select * from pets")[0]) == [1, 'cat']
     assert mocked_client.execute_statement.call_args == mocker.call(
         continueAfterTimeout=True,
         database='test',
@@ -456,9 +391,9 @@ def test_execute_select_as_model(mocked_client, mocker) -> None:
         id: int
         name: str
 
-    assert data_api.execute("select * from pets").as_model(Pet) == [
-        Pet(name='cat', id=1)
-    ]
+    result = data_api.execute("select * from pets")
+    assert len(result) == 1
+    assert result[0].as_model(Pet) == Pet(name='cat', id=1)
 
     assert mocked_client.execute_statement.call_args == mocker.call(
         continueAfterTimeout=True,
@@ -483,7 +418,9 @@ def test_execute_select_query(mocked_client, mocker) -> None:
     data_api = DataAPI(
         resource_arn='dummy', secret_arn='dummy', database='test', client=mocked_client
     )
-    assert list(data_api.execute(Query(Users).filter(Users.id == 1))) == [(1, 'cat')]
+    result = data_api.execute(Query(Users).filter(Users.id == 1))
+    assert len(result) == 1
+    assert list(result[0]) == [1, 'cat']
 
     assert mocked_client.execute_statement.call_args == mocker.call(
         continueAfterTimeout=True,
@@ -506,11 +443,15 @@ def test_execute_insert_parameter_set(mocked_client, mocker) -> None:
     data_api = DataAPI(
         resource_arn='dummy', secret_arn='dummy', database='test', client=mocked_client
     )
-    results = data_api.execute(
+    results = data_api.batch_execute(
         "insert into test.pets  values (:id , :name)",
         [{'id': 3, 'name': 'bird'}, {'id': 4, 'name': 'lion'}],
     )
-    assert results.generated_fields_first_list == [3, 4]
+    assert len(results) == 2
+    assert results[0].generated_fields == [3]
+    assert results[0].generated_fields_first == 3
+    assert results[1].generated_fields == [4]
+    assert results[1].generated_fields_first == 4
 
     assert mocked_client.batch_execute_statement.call_args == mocker.call(
         resourceArn='dummy',

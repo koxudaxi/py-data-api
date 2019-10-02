@@ -61,7 +61,7 @@ def example_with_statement():
         # [(1, 'ken')]
 
         result = data_api.execute('select * from users')
-        print(result.as_dict())
+        print(result)
         # [{'id': 1, 'name': 'ken'}]
 
         # batch insert

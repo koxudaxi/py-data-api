@@ -5,7 +5,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Query
 from sqlalchemy.sql import Insert
 
-from pydataapi import DataAPI, transaction
+from pydataapi import DataAPI, transaction, Result
 
 
 class Users(declarative_base()):
@@ -31,8 +31,8 @@ def add_users(data_api: DataAPI, user_names: List[str]) -> None:
 
 def example_simple_execute():
     data_api = DataAPI(resource_arn, secret_arn, database=database)
-    result = data_api.execute('show tables')
-    print(list(result))
+    result: Result = data_api.execute('show tables')
+    print(list(result.all()))
     # [(Persons, Users, Pets)]
 
 

@@ -8,10 +8,8 @@ install:
 cache: pip
 
 script:
-  - mypy pydataapi --disallow-untyped-defs --ignore-missing-imports
-  - black pydataapi tests --check --skip-string-normalization
-  - isort --recursive --check-only -w 88  --combine-as --thirdparty pydataapi pydataapi tests -m 3 -tc
-  - pytest --cov=pydataapi tests
+  -  ./scripts/test.sh
+  -  ./scripts/lint.sh
   - cp README.md docs/index.md && mkdocs build --verbose --clean --strict
 
 after_success:

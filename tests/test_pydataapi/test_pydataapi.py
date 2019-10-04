@@ -1,7 +1,10 @@
 import pytest
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
+from pydataapi.exceptions import MultipleResultsFound, NoResultFound
 from pydataapi.pydataapi import (
     DataAPI,
+    GeneratedFields,
+    Record,
     Result,
     UpdateResults,
     convert_value,
@@ -78,37 +81,161 @@ def test_create_parameters() -> None:
     )
 
 
+def test_record() -> None:
+    record = Record([1, 'dog'], ['id', 'name'])
+    assert str(record) == '<Record(id=1, name=dog)>'
+    assert record.headers == ['id', 'name']
+    assert next(record) == 1
+    assert next(record) == 'dog'
+    with pytest.raises(StopIteration):
+        next(record)
+
+    assert record.dict() == {'id': 1, 'name': 'dog'}
+
+    class Pet(BaseModel):
+        id: int
+        name: str
+
+    assert record.model(Pet) == Pet(id=1, name='dog')
+
+    assert record == Record([1, 'dog'], ['id', 'name'])
+    assert record == [1, 'dog']
+    assert record == (1, 'dog')
+    assert record != Record([2, 'cat'], ['id', 'name'])
+    assert record != []
+    assert record != tuple()
+    assert record != ''
+
+
+def test_result() -> None:
+    column_metadata = [
+        {
+            "arrayBaseColumnType": 0,
+            "isAutoIncrement": False,
+            "isCaseSensitive": False,
+            "isCurrency": False,
+            "isSigned": True,
+            "label": "id",
+            "name": "id",
+            "nullable": 1,
+            "precision": 11,
+            "scale": 0,
+            "schemaName": "",
+            "tableName": "pets",
+            "type": 4,
+            "typeName": "INT",
+        },
+        {
+            "arrayBaseColumnType": 0,
+            "isAutoIncrement": False,
+            "isCaseSensitive": False,
+            "isCurrency": False,
+            "isSigned": False,
+            "label": "name",
+            "name": "name",
+            "nullable": 1,
+            "precision": 255,
+            "scale": 0,
+            "schemaName": "",
+            "tableName": "pets",
+            "type": 12,
+            "typeName": "VARCHAR",
+        },
+    ]
+    result = Result(
+        {
+            'numberOfRecordsUpdated': 0,
+            'records': [
+                [{'longValue': 1}, {'stringValue': 'dog'}],
+                [{'longValue': 2}, {'stringValue': 'cat'}],
+            ],
+            "columnMetadata": column_metadata,
+        }
+    )
+
+    assert result[0] == [1, 'dog']
+    assert result[1] == [2, 'cat']
+    dog, cat = result[0:2]
+    assert dog == [1, 'dog']
+    assert cat == [2, 'cat']
+    assert next(result) == Record([1, 'dog'], ['id', 'name'])
+    assert next(result) == Record([2, 'cat'], ['id', 'name'])
+    with pytest.raises(StopIteration):
+        next(result)
+
+    assert result.all() == [
+        Record([1, 'dog'], ['id', 'name']),
+        Record([2, 'cat'], ['id', 'name']),
+    ]
+    assert result.first() == Record([1, 'dog'], ['id', 'name'])
+    with pytest.raises(MultipleResultsFound):
+        result.one()
+
+    with pytest.raises(MultipleResultsFound):
+        result.one_or_none()
+
+    result_one = Result(
+        {
+            'numberOfRecordsUpdated': 0,
+            'records': [[{'longValue': 1}, {'stringValue': 'dog'}]],
+            "columnMetadata": column_metadata,
+        }
+    )
+    assert result_one.one() == Record([1, 'dog'], ['id', 'name'])
+    assert result_one.one_or_none() == Record([1, 'dog'], ['id', 'name'])
+    assert result_one.scalar() == 1
+
+    result_empty = Result(
+        {'numberOfRecordsUpdated': 0, 'records': [], "columnMetadata": column_metadata}
+    )
+    with pytest.raises(NoResultFound):
+        result_empty.one()
+    assert result_empty.one_or_none() is None
+    assert result_empty.first() is None
+
+
 def test_generated_fields_first() -> None:
+    assert GeneratedFields([{'1': 1}, {'2': 2}, {'3': 3}]).generated_fields_first == 1
     assert (
-        Result(
-            {'generatedFields': [{'1': 1}, {'2': 2}, {'3': 3}]}
-        ).generated_fields_first
-        == 1
+        GeneratedFields([{'1': 1.1}, {'2': 2}, {'3': 3}]).generated_fields_first == 1.1
     )
     assert (
-        Result(
-            {'generatedFields': [{'1': 1.1}, {'2': 2}, {'3': 3}]}
-        ).generated_fields_first
-        == 1.1
-    )
-    assert (
-        Result(
-            {'generatedFields': [{'1': 'abc'}, {'2': 2}, {'3': 3}]}
-        ).generated_fields_first
+        GeneratedFields([{'1': 'abc'}, {'2': 2}, {'3': 3}]).generated_fields_first
         == 'abc'
     )
 
 
 def test_generated_fields() -> None:
-    assert Result(
-        {'generatedFields': [{'1': 1}, {'2': 2}, {'3': 3}]}
-    ).generated_fields == [1, 2, 3]
-    assert Result(
-        {'generatedFields': [{'1': 1.1}, {'2': 2}, {'3': 3}]}
-    ).generated_fields == [1.1, 2, 3]
-    assert Result(
-        {'generatedFields': [{'1': 'abc'}, {'2': 2}, {'3': 3}]}
-    ).generated_fields == ['abc', 2, 3]
+    assert GeneratedFields([{'1': 1}, {'2': 2}, {'3': 3}]).generated_fields == [1, 2, 3]
+    assert GeneratedFields([{'1': 1.1}, {'2': 2}, {'3': 3}]).generated_fields == [
+        1.1,
+        2,
+        3,
+    ]
+    assert GeneratedFields([{'1': 'abc'}, {'2': 2}, {'3': 3}]).generated_fields == [
+        'abc',
+        2,
+        3,
+    ]
+
+    assert GeneratedFields([{'1': 'abc'}, {'2': 2}, {'3': 3}]) == GeneratedFields(
+        [{'1': 'abc'}, {'2': 2}, {'3': 3}]
+    )
+    assert GeneratedFields([{'1': 'abc'}, {'2': 2}, {'3': 3}]) == ['abc', 2, 3]
+    assert GeneratedFields([{'1': 'abc'}, {'2': 2}, {'3': 3}]) == ('abc', 2, 3)
+    assert GeneratedFields([{'1': 'abc'}, {'2': 2}, {'3': 3}]) != 'bar'
+    assert (
+        str(GeneratedFields([{'1': 'abc'}, {'2': 2}, {'3': 3}]))
+        == '<GeneratedFields(abc, 2, 3)>'
+    )
+
+
+def test_generated_fields_empty() -> None:
+    assert GeneratedFields([]).generated_fields == []
+
+
+def test_generated_fields_first_empty() -> None:
+    assert GeneratedFields([]).generated_fields_first is None
 
 
 def test_update_results() -> None:
@@ -125,19 +252,12 @@ def test_update_results() -> None:
     assert update_results[1].generated_fields_first == 4
     assert update_results[2].generated_fields == [7, 8, 9]
     assert update_results[2].generated_fields_first == 7
+    assert update_results[0:1] == [GeneratedFields([{'1': 1}, {'2': 2}, {'3': 3}])]
 
     empty = UpdateResults([{'generatedFields': []}])
     assert len(empty) == 1
     assert empty[0].generated_fields == []
     assert empty[0].generated_fields_first is None
-
-
-def test_generated_fields_empty() -> None:
-    assert Result({}).generated_fields == []
-
-
-def test_generated_fields_first_empty() -> None:
-    assert Result({}).generated_fields_first is None
 
 
 def test_client(mocker) -> None:
@@ -393,7 +513,7 @@ def test_execute_select_as_model(mocked_client, mocker) -> None:
 
     result = data_api.execute("select * from pets")
     assert len(result) == 1
-    assert result[0].as_model(Pet) == Pet(name='cat', id=1)
+    assert result[0].model(Pet) == Pet(name='cat', id=1)
 
     assert mocked_client.execute_statement.call_args == mocker.call(
         continueAfterTimeout=True,
@@ -471,7 +591,18 @@ def test_execute_insert_parameter_set(mocked_client, mocker) -> None:
     )
 
 
-def test_transaction(mocked_client):
+def test_execute_insert_parameter_set_invalid(mocked_client, mocker) -> None:
+    data_api = DataAPI(
+        resource_arn='dummy', secret_arn='dummy', database='test', client=mocked_client
+    )
+
+    with pytest.raises(ValidationError):
+        data_api.batch_execute(
+            "insert into test.pets  values (:id , :name)", {'id': 3, 'name': 'bird'}
+        )
+
+
+def test_transaction_add_user(mocked_client):
     @transaction(
         resource_arn='dummy', secret_arn='dummy', database='test', client=mocked_client
     )

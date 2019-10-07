@@ -1,3 +1,3 @@
-from .pydataapi import DataAPI, Result, transaction
+from .pydataapi import DataAPI, Record, Result, transaction
 
-__all__ = ['DataAPI', 'transaction', 'Result']
+__all__ = ['DataAPI', 'transaction', 'Result', 'Record']

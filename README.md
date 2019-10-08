@@ -42,14 +42,8 @@ resource_arn: str = 'arn:aws:rds:us-east-1:123456789012:cluster:serverless-test-
 secret_arn: str = 'arn:aws:secretsmanager:us-east-1:123456789012:secret:serverless-test1'
 
 
-def example_simple_execute():
-    data_api = DataAPI(resource_arn, secret_arn, database=database)
-    result: Result = data_api.execute('show tables')
-    print(result.scalar())
-    # Pets
-
-
 def example_with_statement():
+    # DataAPI supports with statement for handling transaction
     with DataAPI(database=database, resource_arn=resource_arn, secret_arn=secret_arn) as data_api:
 
         # start transaction
@@ -57,20 +51,39 @@ def example_with_statement():
         insert: Insert = Insert(Pets, {'name': 'dog'})
         # INSERT INTO pets (name) VALUES ('dog')
 
-        result = data_api.execute(insert)
+        # `execute` accepts SQL statement as str or SQL Alchemy SQL objects
+        result: Result = data_api.execute(insert)
         print(result.number_of_records_updated)
         # 1
 
         query = Query(Pets).filter(Pets.id == 1)
-        result: Result = data_api.execute(query)
+        result: Result = data_api.execute(query)  # or data_api.execute('select id, name from pets')
         # SELECT pets.id, pets.name FROM pets WHERE pets.id = 1
 
-        print(list(result))
+        # `Result` like a Result object in SQL Alchemy
+        print(result.scalar())
+        # 1
+
+        print(result.one())
+        # [Record<id=1, name='dog'>]
+  
+        # `Result` is Sequence[Record]
+        records: List[Record] = list(result)
+        print(records)
         # [Record<id=1, name='dog'>]
 
+        # Record is Sequence and Iterator
+        record = records[0]
+        print(record[0])
+        # 1
+        print(record[1])
+        # dog
+
+        for column in record:
+            print(column)
+            # 1 ...
+
         # show record as dict()
-        result: Result = data_api.execute('select * from pets')
-        record: Record = result.one()
         print(record.dict())
         # {'id': 1, 'name': 'dog'}
 
@@ -107,6 +120,13 @@ def add_pets(data_api: DataAPI, pet_names: List[str]) -> None:
         # some logic ...
 
     # commit
+
+
+def example_simple_execute():
+    data_api = DataAPI(resource_arn, secret_arn, database=database)
+    result: Result = data_api.execute('show tables')
+    print(result.scalar())
+    # Pets
 
 
 def example_rollback():

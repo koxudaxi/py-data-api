@@ -1,17 +1,25 @@
 from contextlib import AbstractContextManager
 from functools import wraps
-from typing import Any, Callable, Dict, List, Optional, Type, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Sequence,
+    Type,
+    TypeVar,
+    Union,
+)
 
 import boto3
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, root_validator, validator
+from pydataapi.exceptions import MultipleResultsFound, NoResultFound
 from sqlalchemy.dialects import mysql
 from sqlalchemy.engine import Dialect
 from sqlalchemy.orm.query import Query
 from sqlalchemy.sql import Delete, Insert, Select, Update
-
-Field = Dict[str, Any]
-Row = List[Any]
-RowDict = Dict[str, Any]
 
 DIALECT: Dialect = mysql.dialect(paramstyle='named')
 
@@ -54,15 +62,206 @@ def create_sql_parameters(
     ]
 
 
-class Result(BaseModel):
-    generated_fields: Optional[List[Any]] = None
-    number_of_records_updated: Optional[int] = None
+T = TypeVar('T')
+
+
+class GeneratedFields:
+    def __repr__(self) -> str:
+        values: str = ', '.join(str(f) for f in self.generated_fields)
+        return f'<{self.__class__.__name__}({values})>'
+
+    def __init__(self, generated_fields: List[Dict[str, Any]]):
+        self._generated_fields_raw: List[Dict[str, Any]] = generated_fields
+        self._generated_fields: Optional[List] = None
 
     @property
-    def generated_fields_first(self) -> Optional[Union[str, int, float]]:
+    def generated_fields(self) -> List:
+        if self._generated_fields is None:
+            self._generated_fields = [
+                list(f.values())[0] for f in self._generated_fields_raw
+            ]
+        return self._generated_fields
+
+    @property
+    def generated_fields_first(self) -> Union[str, int, float, None]:
         if self.generated_fields:
             return self.generated_fields[0]
         return None
+
+    def __eq__(self, other: Any) -> bool:
+        if isinstance(other, GeneratedFields):
+            return self.generated_fields == other.generated_fields
+        elif isinstance(other, list):
+            return self.generated_fields == other
+        elif isinstance(other, tuple):
+            return self.generated_fields == list(other)
+        return False
+
+
+class Record(Sequence, Iterator):
+    def __repr__(self) -> str:
+        values: str = ', '.join(f'{k}={str(v)}' for k, v in self.dict().items())
+        return f'<{self.__class__.__name__}({values})>'
+
+    def __next__(self) -> Any:
+        self._index += 1
+        try:
+            return self[self._index]
+        except IndexError:
+            raise StopIteration
+
+    def __getitem__(  # type: ignore
+        self, i: Union[int, slice]
+    ) -> Any:
+        return self._record[i]  # type: ignore
+
+    def __len__(self) -> int:
+        return len(self._record)
+
+    def __init__(self, row: List, headers: List[str]) -> None:
+        self._record: List = row
+        self._headers: List[str] = headers
+        self._index: int = -1
+
+    @property
+    def headers(self) -> List:
+        return self._headers
+
+    def dict(self) -> Dict:
+        return {header: column for header, column in zip(self.headers, self._record)}
+
+    def model(self, model_type: Type[T]) -> T:
+        return model_type(**self.dict())  # type: ignore
+
+    def __eq__(self, other: Any) -> bool:
+        if isinstance(other, Record):
+            return self._record == other._record
+        elif isinstance(other, list):
+            return self._record == other
+        elif isinstance(other, tuple):
+            return self._record == list(other)
+        return False
+
+
+class Result(Sequence[Record], Iterator[Record], GeneratedFields):
+    def __next__(self) -> Any:
+        self._index += 1
+        try:
+            return self[self._index]
+        except IndexError:
+            raise StopIteration
+
+    def __getitem__(  # type: ignore
+        self, i: Union[int, slice]
+    ) -> Union['Record', List['Record']]:
+        if isinstance(i, slice):
+            return [Record(r, self.headers) for r in self._rows[i]]
+        return Record(self._rows[i], self.headers)  # type: ignore
+
+    def __len__(self) -> int:
+        return len(self._rows)
+
+    def __init__(self, response: Dict):
+        self._response = response
+        self._rows: Sequence[List[Dict]] = [
+            [tuple(column.values())[0] for column in row]
+            for row in response.get('records', [])  # type: ignore
+        ]
+        self._column_metadata: List[Dict[str, Any]] = response.get('columnMetadata', [])
+        self._headers: Optional[List[str]] = None
+        self._index: int = -1
+        super().__init__(response.get('generatedFields', []))
+
+    @property
+    def number_of_records_updated(self) -> Optional[int]:
+        return self._response.get('numberOfRecordsUpdated')
+
+    @property
+    def headers(self) -> List[str]:
+        if self._headers is None:
+            self._headers = [meta['label'] for meta in self._column_metadata]
+        return self._headers
+
+    def first(self) -> Optional[Record]:
+        if len(self) > 0:
+            return self[0]  # type: ignore
+        return None
+
+    def one(self) -> Record:
+        if len(self) == 1:
+            return self[0]  # type: ignore
+        elif len(self) > 1:
+            raise MultipleResultsFound
+        raise NoResultFound
+
+    def one_or_none(self) -> Optional[Record]:
+        if len(self) == 1:
+            return self[0]  # type: ignore
+        elif len(self) > 1:
+            raise MultipleResultsFound
+        return None
+
+    def scalar(self) -> Any:
+        return self.one()[0]
+
+    def all(self) -> List[Record]:
+        return list(self)
+
+
+class UpdateResults(Sequence[GeneratedFields]):
+    def __getitem__(  # type: ignore
+        self, i: Union[int, slice]
+    ) -> Union['GeneratedFields', List['GeneratedFields']]:
+        if isinstance(i, slice):
+            return [
+                GeneratedFields(r['generatedFields']) for r in self._update_results[i]
+            ]
+        return GeneratedFields(
+            self._update_results[i]['generatedFields']
+        )  # type: ignore
+
+    def __len__(self) -> int:
+        return len(self._update_results)
+
+    def __init__(self, update_results: List[Dict[str, List[Dict[str, Any]]]]) -> None:
+        self._update_results = update_results
+
+
+class Options(BaseModel):
+    resourceArn: str
+    secretArn: str
+    sql: Optional[str]
+    database: Optional[str]
+    schema_: Optional[str] = Field(None, alias='schema')
+    transactionId: Optional[str]
+    continueAfterTimeout: Optional[bool]
+    parameters: Optional[List[Dict[str, Any]]]
+    parameterSets: Optional[List[List[Dict[str, Any]]]]
+
+    @root_validator
+    def validate_all(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        return {k: v for k, v in values.items() if v is not None}
+
+    @validator('parameters', pre=True)
+    def convert_parameters(cls, v: Any) -> Any:
+        if isinstance(v, Dict):
+            return create_sql_parameters(v)
+        return v
+
+    @validator('parameterSets', pre=True)
+    def convert_parameter_sets(cls, v: Any) -> Any:
+        if isinstance(v, list):
+            return [create_sql_parameters(parameter) for parameter in v]
+        return v
+
+    @validator('sql', pre=True)
+    def validate_sql(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return v
+        return generate_sql(v)
+
+    def build(self) -> Dict[str, Any]:
+        return self.dict(skip_defaults=True, by_alias=True)
 
 
 class DataAPI(AbstractContextManager):
@@ -95,6 +294,8 @@ class DataAPI(AbstractContextManager):
             if self._rollback_exception:
                 if issubclass(exc_type, self._rollback_exception):
                     self.rollback()
+                else:
+                    self.commit()
             else:
                 self.rollback()
 
@@ -111,56 +312,43 @@ class DataAPI(AbstractContextManager):
         return self._transaction_status
 
     def begin(
-        self,
-        database: Optional[str] = None,
-        resource_arn: Optional[str] = None,
-        schema: Optional[str] = None,
-        secret_arn: Optional[str] = None,
+        self, database: Optional[str] = None, schema: Optional[str] = None
     ) -> str:
-        kwargs: Dict[str, Any] = {
-            'resourceArn': resource_arn or self.resource_arn,
-            'secretArn': secret_arn or self.secret_arn,
-        }
-        if database or self.database:
-            kwargs['database'] = database or self.database
-        if schema:
-            kwargs['schema'] = schema
 
-        response: Dict[str, str] = self.client.begin_transaction(**kwargs)
+        options = Options(
+            resourceArn=self.resource_arn,
+            secretArn=self.secret_arn,
+            database=database or self.database,
+            schema=schema,
+        )
+
+        response: Dict[str, str] = self.client.begin_transaction(**options.build())
         self._transaction_id = response['transactionId']
 
         return response['transactionId']
 
-    def commit(
-        self,
-        transaction_id: Optional[str] = None,
-        resource_arn: Optional[str] = None,
-        secret_arn: Optional[str] = None,
-    ) -> str:
-        kwargs: Dict[str, Any] = {
-            'resourceArn': resource_arn or self.resource_arn,
-            'secretArn': secret_arn or self.secret_arn,
-            'transactionId': transaction_id or self.transaction_id,
-        }
+    def commit(self, transaction_id: Optional[str] = None) -> str:
 
-        response: Dict[str, str] = self.client.commit_transaction(**kwargs)
+        options = Options(
+            resourceArn=self.resource_arn,
+            secretArn=self.secret_arn,
+            transactionId=transaction_id or self.transaction_id,
+        )
+
+        response: Dict[str, str] = self.client.commit_transaction(**options.build())
         self._transaction_status = response['transactionStatus']
 
         return self._transaction_status
 
-    def rollback(
-        self,
-        transaction_id: Optional[str] = None,
-        resource_arn: Optional[str] = None,
-        secret_arn: Optional[str] = None,
-    ) -> str:
-        kwargs: Dict[str, Any] = {
-            'resourceArn': resource_arn or self.resource_arn,
-            'secretArn': secret_arn or self.secret_arn,
-            'transactionId': transaction_id or self.transaction_id,
-        }
+    def rollback(self, transaction_id: Optional[str] = None) -> str:
 
-        response: Dict[str, str] = self.client.rollback_transaction(**kwargs)
+        options = Options(
+            resourceArn=self.resource_arn,
+            secretArn=self.secret_arn,
+            transactionId=transaction_id or self.transaction_id,
+        )
+
+        response: Dict[str, str] = self.client.rollback_transaction(**options.build())
         self._transaction_status = response['transactionStatus']
 
         return self._transaction_status
@@ -168,77 +356,48 @@ class DataAPI(AbstractContextManager):
     def execute(
         self,
         query: Union[Query, Insert, Update, Delete, Select, str],
-        parameters: Union[None, Dict[str, Any], List[Dict[str, Any]]] = None,
-        with_columns: bool = False,
+        parameters: Optional[Dict[str, Any]] = None,
         transaction_id: Optional[str] = None,
         continue_after_timeout: bool = True,
-        resource_arn: Optional[str] = None,
-        secret_arn: Optional[str] = None,
         database: Optional[str] = None,
-    ) -> Union[List[Result], List[Row], List[RowDict]]:
+    ) -> Result:
 
-        kwargs: Dict[str, Any] = {
-            'resourceArn': resource_arn or self.resource_arn,
-            'secretArn': secret_arn or self.secret_arn,
-        }
-
-        if transaction_id or self.transaction_id:
-            kwargs['transactionId'] = transaction_id or self.transaction_id
-
-        if database or self.database:
-            kwargs['database'] = database or self.database
-        if not isinstance(query, str):
-            sql: str = generate_sql(query)
-        else:
-            sql = query
-
-        # batch
-        if isinstance(parameters, List):
-            sql_parameter_set: List[List[Field]] = [
-                create_sql_parameters(parameter) for parameter in parameters
-            ]
-            response: Dict[str, Any] = self.client.batch_execute_statement(
-                sql=sql, parameterSets=sql_parameter_set, **kwargs
-            )
-            return [
-                Result(
-                    generated_fields=[list(f.values())[0] for f in r['generatedFields']]
-                )
-                for r in response['updateResults']
-                if 'generatedFields' in r
-            ]
-
-        if continue_after_timeout:
-            kwargs['continueAfterTimeout'] = continue_after_timeout
-
-        if isinstance(parameters, Dict):
-            sql_parameters: List[Field] = create_sql_parameters(parameters)
-            kwargs['parameters'] = sql_parameters
+        options = Options(
+            resourceArn=self.resource_arn,
+            secretArn=self.secret_arn,
+            database=database or self.database,
+            transactionId=transaction_id or self.transaction_id,
+            continueAfterTimeout=continue_after_timeout,
+            parameters=parameters,
+            sql=query,
+        )
 
         response = self.client.execute_statement(
-            includeResultMetadata=with_columns, sql=sql, **kwargs
+            includeResultMetadata=True, **options.build()
         )
-        if 'records' not in response:
-            return [
-                Result(number_of_records_updated=response['numberOfRecordsUpdated'])
-            ]
+        return Result(response)
 
-        if with_columns:
-            headers = [meta['label'] for meta in response['columnMetadata']]
+    def batch_execute(
+        self,
+        query: Union[Query, Insert, Update, Delete, Select, str],
+        parameter_sets: Optional[List[Dict[str, Any]]],
+        transaction_id: Optional[str] = None,
+        database: Optional[str] = None,
+    ) -> UpdateResults:
 
-            def create_key_value_result(record: List[Dict]) -> Dict:
-                return {
-                    header: list(column.values())[0]
-                    for header, column in zip(headers, record)
-                }
+        options = Options(
+            resourceArn=self.resource_arn,
+            secretArn=self.secret_arn,
+            database=database or self.database,
+            transactionId=transaction_id or self.transaction_id,
+            parameterSets=parameter_sets,
+            sql=query,
+        )
 
-            return [create_key_value_result(record) for record in response['records']]
-        else:
-
-            def create_value_result(record: List[Dict]) -> List:
-                return [list(column.values())[0] for column in record]
-
-            return [create_value_result(record) for record in response['records']]
+        response: Dict[str, Any] = self.client.batch_execute_statement(
+            **options.build()
+        )
+        return UpdateResults(response["updateResults"])
 
 
 def transaction(

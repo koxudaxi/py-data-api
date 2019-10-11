@@ -11,10 +11,10 @@ from sqlalchemy.dialects.mysql.base import (
 from sqlalchemy.dialects.postgresql.base import (
     PGCompiler,
     PGDDLCompiler,
+    PGDialect,
     PGIdentifierPreparer,
     PGInspector,
     PGTypeCompiler,
-    PGDialect,
 )
 from sqlalchemy.engine.default import DefaultDialect
 

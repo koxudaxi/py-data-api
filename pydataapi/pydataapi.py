@@ -8,6 +8,7 @@ from typing import (
     List,
     Optional,
     Sequence,
+    Tuple,
     Type,
     TypeVar,
     Union,
@@ -281,7 +282,7 @@ class DataAPI(AbstractContextManager):
         self._transaction_id: Optional[str] = transaction_id
         self._client: boto3.session.Session.client = client or boto3.client('rds-data')
         self._transaction_status: Optional[str] = None
-        self._rollback_exception: Optional[Type[Exception]] = rollback_exception
+        self.rollback_exception: Optional[Type[Exception]] = rollback_exception
 
     def __enter__(self) -> 'DataAPI':
         self.begin()
@@ -291,8 +292,8 @@ class DataAPI(AbstractContextManager):
         if exc_type is None:
             self.commit()
         else:
-            if self._rollback_exception:
-                if issubclass(exc_type, self._rollback_exception):
+            if self.rollback_exception:
+                if issubclass(exc_type, self.rollback_exception):
                     self.rollback()
                 else:
                     self.commit()

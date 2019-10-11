@@ -1,11 +1,12 @@
 from typing import List
 
 from sqlalchemy import Column, Integer, String
+from sqlalchemy.engine import ResultProxy
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Query
 from sqlalchemy.sql import Insert
 
-from pydataapi import DataAPI, transaction, Result, Record
+from pydataapi import DataAPI, Record, Result, transaction
 
 
 class Pets(declarative_base()):
@@ -118,7 +119,6 @@ def example_rollback_with_custom_exception():
         pass
 
     with DataAPI(resource_arn, secret_arn, rollback_exception=OriginalError) as data_api:
-
         data_api.execute(Insert(Pets, {'name': 'dog'}))
         # some logic ...
 
@@ -126,3 +126,25 @@ def example_rollback_with_custom_exception():
         raise OriginalError  # rollback
 
         # raise Exception <- DataAPI don't rollback
+
+
+def example_driver_for_sqlalchemy():
+    from sqlalchemy.engine import create_engine
+    import boto3
+    client = boto3.client('rds-data', endpoint_url='http://127.0.0.1:8080', aws_access_key_id='aaa',
+                          aws_secret_access_key='bbb')
+    engine = create_engine(
+        'mysql+pydataapi://',
+        echo=True,
+        connect_args={
+            'resource_arn': 'arn:aws:rds:us-east-1:123456789012:cluster:dummy',
+            'secret_arn': 'arn:aws:secretsmanager:us-east-1:123456789012:secret:dummy',
+            'database': 'test',
+            'client': client}
+    )
+
+    result: ResultProxy = engine.execute("select * from pets")
+    print(result.fetchall())
+
+
+example_driver_for_sqlalchemy()

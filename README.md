@@ -5,6 +5,12 @@
 [![codecov](https://codecov.io/gh/koxudaxi/py-data-api/branch/master/graph/badge.svg)](https://codecov.io/gh/koxudaxi/py-data-api)
 
 py-data-api is a user-friendly client which supports SQLAlchemy models.
+Also, the package includes DB API 2.0 Client and SQLAlchemy Dialects.
+
+## Features
+- A user-friendly client which supports SQLAlchemy models
+- SQLAlchemy Dialects (experimental)
+- DB API 2.0 compatible client [PEP 249](https://www.python.org/dev/peps/pep-0249/)
 
 ## What's AWS Aurora Serverless's Data API?
 https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/data-api.html
@@ -149,25 +155,24 @@ def example_rollback_with_custom_exception():
         raise OriginalError  # rollback
 
         # raise Exception <- DataAPI don't rollback
+
+def example_driver_for_sqlalchemy():
+    from sqlalchemy.engine import create_engine
+    engine = create_engine(
+        'mysql+pydataapi://',
+        connect_args={
+            'resource_arn': 'arn:aws:rds:us-east-1:123456789012:cluster:dummy',
+            'secret_arn': 'arn:aws:secretsmanager:us-east-1:123456789012:secret:dummy',
+            'database': 'test'}
+    )
+
+    result: ResultProxy = engine.execute("select * from pets")
+    print(result.fetchall())
+
 ```
-
-## 
-## Features
-### Implemented
-- `BeginTransaction`  - core  
-- `CommitTransaction` - core 
-- `ExecuteStatement` - core 
-- `RollbackTransaction` - core
-- `BatchExecuteStatement` - core
-
-### Not Implemented
-
-- `ExecuteSql(Deprecated API)`
-
 
 ## TODO
 - add documents include docstrings
-- add simply function client
 
 ## Related projects
 ### local-data-api

@@ -14,6 +14,7 @@ from sqlalchemy.dialects.postgresql.base import (
     PGIdentifierPreparer,
     PGInspector,
     PGTypeCompiler,
+    PGDialect,
 )
 from sqlalchemy.engine.default import DefaultDialect
 
@@ -178,7 +179,7 @@ class MySQLDataAPIDialect(DataAPIDialect):
     preparer = MySQLIdentifierPreparer
 
 
-class PostgreSQLDataAPIDialect(DataAPIDialect):
+class PostgreSQLDataAPIDialect(PGDialect, DataAPIDialect):
     name = "postgresql"
     supports_alter = True
     max_identifier_length = 63

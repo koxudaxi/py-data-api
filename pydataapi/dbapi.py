@@ -68,6 +68,8 @@ class Connection:
             self._data_api.rollback()
 
     def cursor(self) -> 'Cursor':
+        if not self._data_api.transaction_id:
+            self._data_api.begin()
         cursor = Cursor(self._data_api)
         self.cursors.append(cursor)
 

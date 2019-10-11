@@ -130,21 +130,13 @@ def example_rollback_with_custom_exception():
 
 def example_driver_for_sqlalchemy():
     from sqlalchemy.engine import create_engine
-    import boto3
-    client = boto3.client('rds-data', endpoint_url='http://127.0.0.1:8080', aws_access_key_id='aaa',
-                          aws_secret_access_key='bbb')
     engine = create_engine(
         'mysql+pydataapi://',
-        echo=True,
         connect_args={
             'resource_arn': 'arn:aws:rds:us-east-1:123456789012:cluster:dummy',
             'secret_arn': 'arn:aws:secretsmanager:us-east-1:123456789012:secret:dummy',
-            'database': 'test',
-            'client': client}
+            'database': 'test'}
     )
 
     result: ResultProxy = engine.execute("select * from pets")
     print(result.fetchall())
-
-
-example_driver_for_sqlalchemy()

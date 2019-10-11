@@ -132,6 +132,27 @@ def test_postgresql(mocked_client) -> None:
                     'isCaseSensitive': True,
                     'isCurrency': False,
                     'isSigned': False,
+                    'label': 'transaction_isolation',
+                    'name': 'transaction_isolation',
+                    'nullable': 2,
+                    'precision': 2147483647,
+                    'scale': 0,
+                    'tableName': '',
+                    'type': 12,
+                    'typeName': 'text',
+                }
+            ],
+            'numberOfRecordsUpdated': 0,
+            'records': [[{'stringValue': 'read committed'}]],
+        },
+        {
+            'columnMetadata': [
+                {
+                    'arrayBaseColumnType': 0,
+                    'isAutoIncrement': False,
+                    'isCaseSensitive': True,
+                    'isCurrency': False,
+                    'isSigned': False,
                     'label': 'standard_conforming_strings',
                     'name': 'standard_conforming_strings',
                     'nullable': 2,

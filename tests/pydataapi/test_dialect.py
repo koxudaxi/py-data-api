@@ -74,8 +74,98 @@ def test_postgresql(mocked_client) -> None:
     mocked_client.begin_transaction.return_value = {'transactionId': 'abc'}
 
     mocked_client.execute_statement.side_effect = [
+        {
+            'records': [
+                [
+                    {
+                        'stringValue': 'PostgreSQL 10.7 on x86_64-pc-linux-musl, compiled by gcc (Alpine 8.3.0) 8.3.0, 64-bit'
+                    }
+                ]
+            ],
+            "columnMetadata": [
+                {
+                    "arrayBaseColumnType": 0,
+                    "isAutoIncrement": False,
+                    "isCaseSensitive": False,
+                    "isCurrency": False,
+                    "isSigned": False,
+                    "label": "name",
+                    "name": "name",
+                    "nullable": 1,
+                    "precision": 255,
+                    "scale": 0,
+                    "schemaName": "",
+                    "tableName": "users",
+                    "type": 12,
+                    "typeName": "VARCHAR",
+                }
+            ],
+        },
+        {
+            'columnMetadata': [
+                {
+                    'arrayBaseColumnType': 0,
+                    'isAutoIncrement': False,
+                    'isCaseSensitive': True,
+                    'isCurrency': False,
+                    'isSigned': False,
+                    'label': 'current_schema',
+                    'name': 'current_schema',
+                    'nullable': 2,
+                    'precision': 2147483647,
+                    'scale': 0,
+                    'tableName': '',
+                    'type': 12,
+                    'typeName': 'name',
+                }
+            ],
+            'numberOfRecordsUpdated': 0,
+            'records': [[{'stringValue': 'public'}]],
+        },
         {'records': [[{'stringValue': 'test plain returns'}]]},
         {'records': [[{'stringValue': 'test unicode returns'}]]},
+        {
+            'columnMetadata': [
+                {
+                    'arrayBaseColumnType': 0,
+                    'isAutoIncrement': False,
+                    'isCaseSensitive': True,
+                    'isCurrency': False,
+                    'isSigned': False,
+                    'label': 'transaction_isolation',
+                    'name': 'transaction_isolation',
+                    'nullable': 2,
+                    'precision': 2147483647,
+                    'scale': 0,
+                    'tableName': '',
+                    'type': 12,
+                    'typeName': 'text',
+                }
+            ],
+            'numberOfRecordsUpdated': 0,
+            'records': [[{'stringValue': 'read committed'}]],
+        },
+        {
+            'columnMetadata': [
+                {
+                    'arrayBaseColumnType': 0,
+                    'isAutoIncrement': False,
+                    'isCaseSensitive': True,
+                    'isCurrency': False,
+                    'isSigned': False,
+                    'label': 'standard_conforming_strings',
+                    'name': 'standard_conforming_strings',
+                    'nullable': 2,
+                    'precision': 2147483647,
+                    'scale': 0,
+                    'tableName': '',
+                    'type': 12,
+                    'typeName': 'text',
+                }
+            ],
+            'numberOfRecordsUpdated': 0,
+            'records': [[{'stringValue': 'on'}]],
+        },
         {
             'numberOfRecordsUpdated': 0,
             'records': [[{'longValue': 1}, {'stringValue': 'cat'}]],

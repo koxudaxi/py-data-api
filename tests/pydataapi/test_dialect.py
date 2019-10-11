@@ -10,6 +10,7 @@ def mocked_client(mocker):
 def test_mysql(mocked_client) -> None:
     from sqlalchemy.engine import create_engine
 
+    mocked_client.begin_transaction.return_value = {'transactionId': 'abc'}
     mocked_client.execute_statement.side_effect = [
         {'records': [[{'stringValue': 'test plain returns'}]]},
         {'records': [[{'stringValue': 'test unicode returns'}]]},
@@ -54,6 +55,7 @@ def test_mysql(mocked_client) -> None:
     ]
     engine = create_engine(
         'mysql+pydataapi://',
+        echo=True,
         connect_args={
             'resource_arn': 'arn:aws:rds:us-east-1:123456789012:cluster:dummy',
             'secret_arn': 'arn:aws:secretsmanager:us-east-1:123456789012:secret:dummy',
@@ -68,6 +70,8 @@ def test_mysql(mocked_client) -> None:
 
 def test_postgresql(mocked_client) -> None:
     from sqlalchemy.engine import create_engine
+
+    mocked_client.begin_transaction.return_value = {'transactionId': 'abc'}
 
     mocked_client.execute_statement.side_effect = [
         {'records': [[{'stringValue': 'test plain returns'}]]},

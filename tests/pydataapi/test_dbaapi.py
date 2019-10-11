@@ -56,6 +56,7 @@ def test_rollback_not_called(mocked_client) -> None:
 
 
 def test_execute_insert(mocked_client, mocker) -> None:
+    mocked_client.begin_transaction.return_value = {'transactionId': 'abc'}
     mocked_client.execute_statement.return_value = {
         'generatedFields': [],
         'numberOfRecordsUpdated': 1,
@@ -72,10 +73,12 @@ def test_execute_insert(mocked_client, mocker) -> None:
         secretArn='dummy',
         sql="insert into pets values(1, 'cat')",
         database='test',
+        transactionId='abc',
     )
 
 
 def test_execute_insert_parameters(mocked_client, mocker) -> None:
+    mocked_client.begin_transaction.return_value = {'transactionId': 'abc'}
     mocked_client.execute_statement.return_value = {
         'generatedFields': [],
         'numberOfRecordsUpdated': 1,
@@ -99,10 +102,12 @@ def test_execute_insert_parameters(mocked_client, mocker) -> None:
         secretArn='dummy',
         sql="insert into pets values(:id, :name)",
         database='test',
+        transactionId='abc',
     )
 
 
 def test_execute_select(mocked_client, mocker) -> None:
+    mocked_client.begin_transaction.return_value = {'transactionId': 'abc'}
     mocked_client.execute_statement.return_value = {
         'numberOfRecordsUpdated': 0,
         'records': [[{'longValue': 1}, {'stringValue': 'cat'}]],
@@ -121,6 +126,7 @@ def test_execute_select(mocked_client, mocker) -> None:
         resourceArn='dummy',
         secretArn='dummy',
         sql='select * from pets',
+        transactionId='abc',
     )
 
     data_api.close()
@@ -128,6 +134,7 @@ def test_execute_select(mocked_client, mocker) -> None:
 
 
 def test_execute_select_fetch_many(mocked_client, mocker) -> None:
+    mocked_client.begin_transaction.return_value = {'transactionId': 'abc'}
     mocked_client.execute_statement.return_value = {
         'numberOfRecordsUpdated': 0,
         'records': [
@@ -150,6 +157,7 @@ def test_execute_select_fetch_many(mocked_client, mocker) -> None:
         resourceArn='dummy',
         secretArn='dummy',
         sql='select * from pets',
+        transactionId='abc',
     )
 
     data_api.close()
@@ -157,6 +165,7 @@ def test_execute_select_fetch_many(mocked_client, mocker) -> None:
 
 
 def test_execute_select_iter(mocked_client, mocker) -> None:
+    mocked_client.begin_transaction.return_value = {'transactionId': 'abc'}
     mocked_client.execute_statement.return_value = {
         'numberOfRecordsUpdated': 0,
         'records': [
@@ -180,6 +189,7 @@ def test_execute_select_iter(mocked_client, mocker) -> None:
         resourceArn='dummy',
         secretArn='dummy',
         sql='select * from pets',
+        transactionId='abc',
     )
 
     data_api.close()
@@ -187,6 +197,7 @@ def test_execute_select_iter(mocked_client, mocker) -> None:
 
 
 def test_execute_insert_parameter_set(mocked_client, mocker) -> None:
+    mocked_client.begin_transaction.return_value = {'transactionId': 'abc'}
     mocked_client.batch_execute_statement.return_value = {
         'updateResults': [
             {'generatedFields': [{'longValue': 3}]},
@@ -220,6 +231,7 @@ def test_execute_insert_parameter_set(mocked_client, mocker) -> None:
             ],
         ],
         database='test',
+        transactionId='abc',
     )
 
 

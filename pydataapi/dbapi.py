@@ -62,10 +62,12 @@ class Connection:
     def commit(self) -> None:
         if self._data_api.transaction_id:
             self._data_api.commit()
+            self._data_api._transaction_id = None
 
     def rollback(self) -> None:
         if self._data_api.transaction_id:
             self._data_api.rollback()
+            self._data_api._transaction_id = None
 
     def cursor(self) -> 'Cursor':
         if not self._data_api.transaction_id:

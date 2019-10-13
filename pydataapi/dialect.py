@@ -1,6 +1,7 @@
 from abc import ABC
 from typing import Any, Type
 
+from pydataapi.dbapi import Connection
 from sqlalchemy.dialects.mysql.base import (
     MySQLCompiler,
     MySQLDDLCompiler,
@@ -17,8 +18,6 @@ from sqlalchemy.dialects.postgresql.base import (
     PGTypeCompiler,
 )
 from sqlalchemy.engine.default import DefaultDialect
-
-from pydataapi.dbapi import Connection
 
 
 class DataAPIDialect(DefaultDialect, ABC):
@@ -50,62 +49,62 @@ class DataAPIDialect(DefaultDialect, ABC):
         return Connection
 
     def get_columns(
-            self, connection: Any, table_name: Any, schema: Any = None, **kw: Any
+        self, connection: Any, table_name: Any, schema: Any = None, **kw: Any
     ) -> None:  # pragma: no cover
         pass
 
     def get_primary_keys(
-            self, connection: Any, table_name: Any, schema: Any = None, **kw: Any
+        self, connection: Any, table_name: Any, schema: Any = None, **kw: Any
     ) -> None:  # pragma: no cover
         pass
 
     def get_foreign_keys(
-            self, connection: Any, table_name: Any, schema: Any = None, **kw: Any
+        self, connection: Any, table_name: Any, schema: Any = None, **kw: Any
     ) -> None:  # pragma: no cover
         pass
 
     def get_table_names(
-            self, connection: Any, schema: Any = None, **kw: Any
+        self, connection: Any, schema: Any = None, **kw: Any
     ) -> None:  # pragma: no cover
         pass
 
     def get_temp_table_names(
-            self, connection: Any, schema: Any = None, **kw: Any
+        self, connection: Any, schema: Any = None, **kw: Any
     ) -> None:  # pragma: no cover
         pass
 
     def get_view_names(
-            self, connection: Any, schema: Any = None, **kw: Any
+        self, connection: Any, schema: Any = None, **kw: Any
     ) -> None:  # pragma: no cover
         pass
 
     def get_temp_view_names(
-            self, connection: Any, schema: Any = None, **kw: Any
+        self, connection: Any, schema: Any = None, **kw: Any
     ) -> None:  # pragma: no cover
         pass
 
     def get_view_definition(
-            self, connection: Any, view_name: Any, schema: Any = None, **kw: Any
+        self, connection: Any, view_name: Any, schema: Any = None, **kw: Any
     ) -> None:  # pragma: no cover
         pass
 
     def get_indexes(
-            self, connection: Any, table_name: Any, schema: Any = None, **kw: Any
+        self, connection: Any, table_name: Any, schema: Any = None, **kw: Any
     ) -> None:  # pragma: no cover
         pass
 
     def get_unique_constraints(
-            self, connection: Any, table_name: Any, schema: Any = None, **kw: Any
+        self, connection: Any, table_name: Any, schema: Any = None, **kw: Any
     ) -> None:  # pragma: no cover
         pass
 
     def get_check_constraints(
-            self, connection: Any, table_name: Any, schema: Any = None, **kw: Any
+        self, connection: Any, table_name: Any, schema: Any = None, **kw: Any
     ) -> None:  # pragma: no cover
         pass
 
     def get_table_comment(
-            self, connection: Any, table_name: Any, schema: Any = None, **kw: Any
+        self, connection: Any, table_name: Any, schema: Any = None, **kw: Any
     ) -> None:  # pragma: no cover
         pass
 
@@ -116,12 +115,12 @@ class DataAPIDialect(DefaultDialect, ABC):
         pass
 
     def has_table(
-            self, connection: Any, table_name: Any, schema: Any = None
+        self, connection: Any, table_name: Any, schema: Any = None
     ) -> None:  # pragma: no cover
         pass
 
     def has_sequence(
-            self, connection: Any, sequence_name: Any, schema: Any = None
+        self, connection: Any, sequence_name: Any, schema: Any = None
     ) -> None:  # pragma: no cover
         pass
 
@@ -135,17 +134,17 @@ class DataAPIDialect(DefaultDialect, ABC):
         pass
 
     def do_prepare_twophase(
-            self, connection: Any, xid: Any
+        self, connection: Any, xid: Any
     ) -> None:  # pragma: no cover
         pass
 
     def do_rollback_twophase(
-            self, connection: Any, xid: Any, is_prepared: bool = True, recover: bool = False
+        self, connection: Any, xid: Any, is_prepared: bool = True, recover: bool = False
     ) -> None:  # pragma: no cover
         pass
 
     def do_commit_twophase(
-            self, connection: Any, xid: Any, is_prepared: bool = True, recover: bool = False
+        self, connection: Any, xid: Any, is_prepared: bool = True, recover: bool = False
     ) -> None:  # pragma: no cover
         pass
 
@@ -153,7 +152,7 @@ class DataAPIDialect(DefaultDialect, ABC):
         pass
 
     def set_isolation_level(
-            self, dbapi_conn: Any, level: Any
+        self, dbapi_conn: Any, level: Any
     ) -> None:  # pragma: no cover
         pass
 

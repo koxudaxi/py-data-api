@@ -5,7 +5,7 @@ services:
     image: koxudaxi/local-data-api:0.4.0
     restart: always
     environment:
-      MYSQL_HOST: db
+      MYSQL_HOST: mysql
       MYSQL_PORT: 3306
       MYSQL_USER: root
       MYSQL_PASSWORD: example

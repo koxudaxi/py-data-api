@@ -12,6 +12,150 @@ def test_mysql(mocked_client) -> None:
 
     mocked_client.begin_transaction.return_value = {'transactionId': 'abc'}
     mocked_client.execute_statement.side_effect = [
+        {
+            'columnMetadata': [
+                {
+                    'arrayBaseColumnType': 0,
+                    'isAutoIncrement': False,
+                    'isCaseSensitive': False,
+                    'isCurrency': False,
+                    'isSigned': True,
+                    'label': 'Variable_name',
+                    'name': 'VARIABLE_NAME',
+                    'nullable': 0,
+                    'precision': 256,
+                    'scale': 0,
+                    'tableName': 'VARIABLES',
+                    'type': 12,
+                    'typeName': 'VARCHAR',
+                },
+                {
+                    'arrayBaseColumnType': 0,
+                    'isAutoIncrement': False,
+                    'isCaseSensitive': False,
+                    'isCurrency': False,
+                    'isSigned': True,
+                    'label': 'Value',
+                    'name': 'VARIABLE_VALUE',
+                    'nullable': 1,
+                    'precision': 4096,
+                    'scale': 0,
+                    'tableName': 'VARIABLES',
+                    'type': 12,
+                    'typeName': 'VARCHAR',
+                },
+            ],
+            'numberOfRecordsUpdated': 0,
+            'records': [
+                [
+                    {'stringValue': 'sql_mode'},
+                    {
+                        'stringValue': 'IGNORE_SPACE,STRICT_TRANS_TABLES,NO_ENGINE_SUBSTITUTION'
+                    },
+                ]
+            ],
+        },
+        {
+            'columnMetadata': [
+                {
+                    'arrayBaseColumnType': 0,
+                    'isAutoIncrement': False,
+                    'isCaseSensitive': False,
+                    'isCurrency': False,
+                    'isSigned': True,
+                    'label': 'Variable_name',
+                    'name': 'VARIABLE_NAME',
+                    'nullable': 0,
+                    'precision': 256,
+                    'scale': 0,
+                    'tableName': 'VARIABLES',
+                    'type': 12,
+                    'typeName': 'VARCHAR',
+                },
+                {
+                    'arrayBaseColumnType': 0,
+                    'isAutoIncrement': False,
+                    'isCaseSensitive': False,
+                    'isCurrency': False,
+                    'isSigned': True,
+                    'label': 'Value',
+                    'name': 'VARIABLE_VALUE',
+                    'nullable': 1,
+                    'precision': 4096,
+                    'scale': 0,
+                    'tableName': 'VARIABLES',
+                    'type': 12,
+                    'typeName': 'VARCHAR',
+                },
+            ],
+            'numberOfRecordsUpdated': 0,
+            'records': [
+                [{'stringValue': 'lower_case_table_names'}, {'stringValue': '0'}]
+            ],
+        },
+        {
+            'columnMetadata': [
+                {
+                    'arrayBaseColumnType': 0,
+                    'isAutoIncrement': False,
+                    'isCaseSensitive': False,
+                    'isCurrency': False,
+                    'isSigned': True,
+                    'label': 'VERSION()',
+                    'name': 'VERSION()',
+                    'nullable': 0,
+                    'precision': 24,
+                    'scale': 31,
+                    'tableName': '',
+                    'type': 12,
+                    'typeName': 'VARCHAR',
+                }
+            ],
+            'numberOfRecordsUpdated': 0,
+            'records': [[{'stringValue': '5.6.45'}]],
+        },
+        {
+            'columnMetadata': [
+                {
+                    'arrayBaseColumnType': 0,
+                    'isAutoIncrement': False,
+                    'isCaseSensitive': False,
+                    'isCurrency': False,
+                    'isSigned': True,
+                    'label': 'DATABASE()',
+                    'name': 'DATABASE()',
+                    'nullable': 1,
+                    'precision': 136,
+                    'scale': 31,
+                    'tableName': '',
+                    'type': 12,
+                    'typeName': 'VARCHAR',
+                }
+            ],
+            'numberOfRecordsUpdated': 0,
+            'records': [[{'stringValue': 'test'}]],
+        },
+        {
+            'columnMetadata': [
+                {
+                    'arrayBaseColumnType': 0,
+                    'isAutoIncrement': False,
+                    'isCaseSensitive': False,
+                    'isCurrency': False,
+                    'isSigned': True,
+                    'label': '@@tx_isolation',
+                    'name': '@@tx_isolation',
+                    'nullable': 1,
+                    'precision': 60,
+                    'scale': 31,
+                    'tableName': '',
+                    'type': 12,
+                    'typeName': 'VARCHAR',
+                }
+            ],
+            'numberOfRecordsUpdated': 0,
+            'records': [[{'stringValue': 'REPEATABLE-READ'}]],
+        },
         {'records': [[{'stringValue': 'test plain returns'}]]},
         {'records': [[{'stringValue': 'test unicode returns'}]]},
         {

@@ -1,8 +1,8 @@
 version: '3.1'
 
 services:
-  local-data-api:
-    image: koxudaxi/local-data-api:0.3.7
+  local-data-api-mysql:
+    image: koxudaxi/local-data-api:0.4.0
     restart: always
     environment:
       MYSQL_HOST: db
@@ -13,7 +13,7 @@ services:
       SECRET_ARN: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:dummy'
     ports:
       - "8080:80"
-  db:
+  mysql:
     image: mysql:5.6
     command: --default-authentication-plugin=mysql_native_password
     restart: always

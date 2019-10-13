@@ -5,6 +5,7 @@ from pydataapi.dbapi import Connection
 from sqlalchemy.dialects.mysql.base import (
     MySQLCompiler,
     MySQLDDLCompiler,
+    MySQLDialect,
     MySQLIdentifierPreparer,
     MySQLTypeCompiler,
 )
@@ -21,7 +22,6 @@ from sqlalchemy.engine.default import DefaultDialect
 
 class DataAPIDialect(DefaultDialect, ABC):
     driver: str = 'dataapi'
-    name = "mysql"
     supports_alter = True
 
     supports_native_boolean = True
@@ -40,12 +40,6 @@ class DataAPIDialect(DefaultDialect, ABC):
     default_paramstyle = "named"
 
     cte_follows_insert = True
-
-    statement_compiler = MySQLCompiler
-    ddl_compiler = MySQLDDLCompiler
-    type_compiler = MySQLTypeCompiler
-
-    preparer = MySQLIdentifierPreparer
 
     _backslash_escapes = True
     _server_ansiquotes = False
@@ -170,7 +164,13 @@ class DataAPIDialect(DefaultDialect, ABC):
         pass
 
 
-class MySQLDataAPIDialect(DataAPIDialect):
+class MySQLDataAPIDialect(MySQLDialect, DataAPIDialect):
+    def _extract_error_code(self, exception: Exception) -> Any:  # pragma: no cover
+        pass
+
+    def _detect_charset(self, connection: Any) -> Any:  # pragma: no cover
+        pass
+
     name = "mysql"
     statement_compiler = MySQLCompiler
     ddl_compiler = MySQLDDLCompiler

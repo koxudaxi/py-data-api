@@ -130,7 +130,7 @@ class Cursor:
         )
         rows: List[List] = getattr(result, '_rows')
         self._rows = rows
-        self._rowcount = len(rows)
+        self._rowcount = len(rows) or result.number_of_records_updated
         return self
 
     def executemany(

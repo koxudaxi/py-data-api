@@ -175,7 +175,7 @@ class Result(Sequence[Record], Iterator[Record], GeneratedFields):
 
     @property
     def number_of_records_updated(self) -> Optional[int]:
-        return self._response.get('numberOfRecordsUpdated')
+        return self._response.get('numberOfRecordsUpdated', 0)
 
     @property
     def headers(self) -> List[str]:

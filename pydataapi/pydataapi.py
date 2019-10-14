@@ -174,8 +174,8 @@ class Result(Sequence[Record], Iterator[Record], GeneratedFields):
         super().__init__(response.get('generatedFields', []))
 
     @property
-    def number_of_records_updated(self) -> Optional[int]:
-        return self._response.get('numberOfRecordsUpdated')
+    def number_of_records_updated(self) -> int:
+        return self._response.get('numberOfRecordsUpdated', 0)
 
     @property
     def headers(self) -> List[str]:

@@ -251,7 +251,7 @@ class Options(BaseModel):
 
     @validator('parameterSets', pre=True)
     def convert_parameter_sets(cls, v: Any) -> Any:
-        if isinstance(v, list):
+        if isinstance(v, (list, tuple)):
             return [create_sql_parameters(parameter) for parameter in v]
         return v
 

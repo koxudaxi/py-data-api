@@ -164,7 +164,7 @@ class Result(Sequence[Record], Iterator[Record], GeneratedFields):
 
     def __init__(self, response: Dict):
         self._response = response
-        self._rows: Sequence[List[Dict]] = [
+        self._rows: Sequence[List] = [
             [
                 None
                 if tuple(column.keys())[0] == 'isNull'

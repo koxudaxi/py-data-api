@@ -165,7 +165,12 @@ class Result(Sequence[Record], Iterator[Record], GeneratedFields):
     def __init__(self, response: Dict):
         self._response = response
         self._rows: Sequence[List[Dict]] = [
-            [tuple(column.values())[0] for column in row]
+            [
+                None
+                if tuple(column.keys())[0] == 'isNull'
+                else tuple(column.values())[0]
+                for column in row
+            ]
             for row in response.get('records', [])  # type: ignore
         ]
         self._column_metadata: List[Dict[str, Any]] = response.get('columnMetadata', [])

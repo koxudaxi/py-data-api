@@ -164,8 +164,13 @@ class Result(Sequence[Record], Iterator[Record], GeneratedFields):
 
     def __init__(self, response: Dict):
         self._response = response
-        self._rows: Sequence[List[Dict]] = [
-            [tuple(column.values())[0] for column in row]
+        self._rows: Sequence[List] = [
+            [
+                None
+                if tuple(column.keys())[0] == 'isNull'
+                else tuple(column.values())[0]
+                for column in row
+            ]
             for row in response.get('records', [])  # type: ignore
         ]
         self._column_metadata: List[Dict[str, Any]] = response.get('columnMetadata', [])
@@ -251,7 +256,7 @@ class Options(BaseModel):
 
     @validator('parameterSets', pre=True)
     def convert_parameter_sets(cls, v: Any) -> Any:
-        if isinstance(v, list):
+        if isinstance(v, (list, tuple)):
             return [create_sql_parameters(parameter) for parameter in v]
         return v
 

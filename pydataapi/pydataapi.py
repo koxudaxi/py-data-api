@@ -238,7 +238,7 @@ class Result(Sequence[Record], Iterator[Record], GeneratedFields):
                 for row in response.get('records', [])  # type: ignore
             ]
         else:
-            self._rows: Sequence[List] = [
+            self._rows = [
                 [
                     None
                     if tuple(column.keys())[0] == 'isNull'

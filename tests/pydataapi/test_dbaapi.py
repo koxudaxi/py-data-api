@@ -58,7 +58,7 @@ def test_rollback_not_called(mocked_client) -> None:
 def test_execute_insert(mocked_client, mocker) -> None:
     mocked_client.begin_transaction.return_value = {'transactionId': 'abc'}
     mocked_client.execute_statement.return_value = {
-        'generatedFields': [],
+        'generatedFields': [{'longValue': 3}],
         'numberOfRecordsUpdated': 1,
     }
     data_api = connect(
@@ -66,6 +66,7 @@ def test_execute_insert(mocked_client, mocker) -> None:
     )
     results = data_api.execute("insert into pets values(1, 'cat')")
     assert list(results.fetchall()) == []
+    assert results.lastrowid == 3
     assert mocked_client.execute_statement.call_args == mocker.call(
         continueAfterTimeout=True,
         includeResultMetadata=True,
@@ -215,6 +216,7 @@ def test_execute_insert_parameter_set(mocked_client, mocker) -> None:
     rows = results.fetchall()
     assert len(rows) == 2
     assert rows == [[3], [4]]
+    assert results.lastrowid == 4
 
     assert mocked_client.batch_execute_statement.call_args == mocker.call(
         resourceArn='dummy',

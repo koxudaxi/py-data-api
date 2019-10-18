@@ -37,7 +37,6 @@ class DataAPIDialect(DefaultDialect, ABC):
 
     supports_comments = True
     inline_comments = True
-    default_paramstyle = "named"
 
     cte_follows_insert = True
 
@@ -168,21 +167,13 @@ class MySQLDataAPIDialect(MySQLDialect, DataAPIDialect):
         pass
 
     name = "mysql"
-    statement_compiler = MySQLCompiler
-    ddl_compiler = MySQLDDLCompiler
-    type_compiler = MySQLTypeCompiler
-
-    preparer = MySQLIdentifierPreparer
+    default_paramstyle = "named"
 
 
 class PostgreSQLDataAPIDialect(PGDialect, DataAPIDialect):
     name = "postgresql"
+    default_paramstyle = "named"
     supports_alter = True
     max_identifier_length = 63
     supports_sane_rowcount = True
-    statement_compiler = PGCompiler
-    ddl_compiler = PGDDLCompiler
-    type_compiler = PGTypeCompiler
-    preparer = PGIdentifierPreparer
-    inspector = PGInspector
     isolation_level = None

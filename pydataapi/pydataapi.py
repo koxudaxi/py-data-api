@@ -223,11 +223,14 @@ class Result(Sequence[Record], Iterator[Record], GeneratedFields):
         process_result_value_function_list: Optional[List[Callable]] = None,
     ) -> None:
         self._response = response
-
         if process_result_value_function_list:
-            self._rows: Sequence[List[Dict]] = [
+            self._rows: Sequence[List] = [
                 [
-                    process_result_value(tuple(column.values())[0])
+                    process_result_value(
+                        None
+                        if tuple(column.keys())[0] == 'isNull'
+                        else tuple(column.values())[0]
+                    )
                     for column, process_result_value in zip(
                         row, process_result_value_function_list
                     )
@@ -235,8 +238,13 @@ class Result(Sequence[Record], Iterator[Record], GeneratedFields):
                 for row in response.get('records', [])  # type: ignore
             ]
         else:
-            self._rows = [
-                [tuple(column.values())[0] for column in row]
+            self._rows: Sequence[List] = [
+                [
+                    None
+                    if tuple(column.keys())[0] == 'isNull'
+                    else tuple(column.values())[0]
+                    for column in row
+                ]
                 for row in response.get('records', [])  # type: ignore
             ]
         self._column_metadata: List[Dict[str, Any]] = response.get('columnMetadata', [])
@@ -245,8 +253,8 @@ class Result(Sequence[Record], Iterator[Record], GeneratedFields):
         super().__init__(response.get('generatedFields', []))
 
     @property
-    def number_of_records_updated(self) -> Optional[int]:
-        return self._response.get('numberOfRecordsUpdated')
+    def number_of_records_updated(self) -> int:
+        return self._response.get('numberOfRecordsUpdated', 0)
 
     @property
     def headers(self) -> List[str]:
@@ -322,7 +330,7 @@ class Options(BaseModel):
 
     @validator('parameterSets', pre=True)
     def convert_parameter_sets(cls, v: Any) -> Any:
-        if isinstance(v, list):
+        if isinstance(v, (list, tuple)):
             return [create_sql_parameters(parameter) for parameter in v]
         return v
 

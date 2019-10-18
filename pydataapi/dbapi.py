@@ -112,10 +112,15 @@ class Cursor:
 
         self._rows: List[List] = []
         self._rowcount: int = -1
+        self._lastrowid: Optional[int] = None
 
     @property
     def rowcount(self) -> int:
         return self._rowcount
+
+    @property
+    def lastrowid(self) -> Optional[int]:
+        return self._lastrowid
 
     def close(self) -> None:
         self.closed = True
@@ -130,7 +135,8 @@ class Cursor:
         )
         rows: List[List] = getattr(result, '_rows')
         self._rows = rows
-        self._rowcount = len(rows)
+        self._rowcount = len(rows) or result.number_of_records_updated
+        self._lastrowid = result.generated_fields_first  # type: ignore
         return self
 
     def executemany(
@@ -141,6 +147,9 @@ class Cursor:
         self._rows = [result.generated_fields for result in results]
         self._rowcount = len(self._rows)
         self.description = []
+        self._lastrowid = (  # type: ignore
+            results[-1].generated_fields_first if results else None  # type: ignore
+        )
         return self
 
     def fetchone(self) -> Optional[List]:

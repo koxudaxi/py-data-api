@@ -1,4 +1,5 @@
 import pytest
+import sqlalchemy.types as types
 from pydantic import BaseModel, ValidationError
 from pydataapi.exceptions import MultipleResultsFound, NoResultFound
 from pydataapi.pydataapi import (
@@ -15,7 +16,20 @@ from pydataapi.pydataapi import (
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Query
-from sqlalchemy.sql import Insert
+from sqlalchemy.sql import Insert, Select
+
+
+class MyType(types.TypeDecorator):
+    impl = types.Unicode
+
+    def process_result_value(self, value, dialect):
+        return f'my_type_{value}'
+
+
+class Pets(declarative_base()):
+    __tablename__ = 'pets'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(MyType(255, collation='utf8_unicode_ci'), default=None)
 
 
 @pytest.fixture
@@ -461,6 +475,114 @@ def test_execute_select(mocked_client, mocker) -> None:
         resourceArn='dummy',
         secretArn='dummy',
         sql='select * from pets',
+    )
+
+
+def test_execute_select_process_result_value(mocked_client, mocker) -> None:
+    mocked_client.execute_statement.return_value = {
+        'numberOfRecordsUpdated': 0,
+        'records': [[{'longValue': 1}, {'stringValue': 'cat'}]],
+        'columnMetadata': [
+            {
+                "arrayBaseColumnType": 0,
+                "isAutoIncrement": False,
+                "isCaseSensitive": False,
+                "isCurrency": False,
+                "isSigned": True,
+                "label": "id",
+                "name": "id",
+                "nullable": 1,
+                "precision": 11,
+                "scale": 0,
+                "schemaName": "",
+                "tableName": "pets",
+                "type": 4,
+                "typeName": "INT",
+            },
+            {
+                "arrayBaseColumnType": 0,
+                "isAutoIncrement": False,
+                "isCaseSensitive": False,
+                "isCurrency": False,
+                "isSigned": False,
+                "label": "name",
+                "name": "name",
+                "nullable": 1,
+                "precision": 255,
+                "scale": 0,
+                "schemaName": "",
+                "tableName": "pets",
+                "type": 12,
+                "typeName": "VARCHAR",
+            },
+        ],
+    }
+    data_api = DataAPI(
+        resource_arn='dummy', secret_arn='dummy', database='test', client=mocked_client
+    )
+    assert list(data_api.execute(Select([Pets]))[0]) == [1, 'my_type_cat']
+    assert mocked_client.execute_statement.call_args == mocker.call(
+        continueAfterTimeout=True,
+        database='test',
+        includeResultMetadata=True,
+        resourceArn='dummy',
+        secretArn='dummy',
+        sql="""SELECT pets.id, pets.name 
+FROM pets""",
+    )
+
+
+def test_execute_query_process_result_value(mocked_client, mocker) -> None:
+    mocked_client.execute_statement.return_value = {
+        'numberOfRecordsUpdated': 0,
+        'records': [[{'longValue': 1}, {'stringValue': 'cat'}]],
+        'columnMetadata': [
+            {
+                "arrayBaseColumnType": 0,
+                "isAutoIncrement": False,
+                "isCaseSensitive": False,
+                "isCurrency": False,
+                "isSigned": True,
+                "label": "id",
+                "name": "id",
+                "nullable": 1,
+                "precision": 11,
+                "scale": 0,
+                "schemaName": "",
+                "tableName": "pets",
+                "type": 4,
+                "typeName": "INT",
+            },
+            {
+                "arrayBaseColumnType": 0,
+                "isAutoIncrement": False,
+                "isCaseSensitive": False,
+                "isCurrency": False,
+                "isSigned": False,
+                "label": "name",
+                "name": "name",
+                "nullable": 1,
+                "precision": 255,
+                "scale": 0,
+                "schemaName": "",
+                "tableName": "pets",
+                "type": 12,
+                "typeName": "VARCHAR",
+            },
+        ],
+    }
+    data_api = DataAPI(
+        resource_arn='dummy', secret_arn='dummy', database='test', client=mocked_client
+    )
+    assert list(data_api.execute(Query(Pets))[0]) == [1, 'my_type_cat']
+    assert mocked_client.execute_statement.call_args == mocker.call(
+        continueAfterTimeout=True,
+        database='test',
+        includeResultMetadata=True,
+        resourceArn='dummy',
+        secretArn='dummy',
+        sql="""SELECT pets.id, pets.name 
+FROM pets""",
     )
 
 

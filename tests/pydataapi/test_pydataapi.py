@@ -682,6 +682,8 @@ def test_execute_insert_parameter_set(mocked_client, mocker) -> None:
         ]
     }
 
+    mocked_client.begin_transaction.return_value = {'transactionId': '12345'}
+
     data_api = DataAPI(
         resource_arn='dummy', secret_arn='dummy', database='test', client=mocked_client
     )
@@ -710,6 +712,7 @@ def test_execute_insert_parameter_set(mocked_client, mocker) -> None:
             ],
         ],
         database='test',
+        transactionId='12345',
     )
 
 

@@ -367,8 +367,7 @@ class DataAPI(AbstractContextManager):
         self.rollback_exception: Optional[Type[Exception]] = rollback_exception
 
     def __enter__(self) -> 'DataAPI':
-        if not self.transaction_id:
-            self.begin()
+        self.begin()
         return self
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
@@ -477,28 +476,36 @@ class DataAPI(AbstractContextManager):
         database: Optional[str] = None,
     ) -> UpdateResults:
 
-        with self:
-            return UpdateResults(
-                list(
-                    flatten(
-                        [
-                            self.client.batch_execute_statement(
-                                **Options(
-                                    resourceArn=self.resource_arn,
-                                    secretArn=self.secret_arn,
-                                    database=database or self.database,
-                                    transactionId=transaction_id or self.transaction_id,
-                                    parameterSets=chunked_parameter_sets,
-                                    sql=query,
-                                ).build()
-                            )["updateResults"]
-                            for chunked_parameter_sets in chunked(
-                                parameter_sets or [], MAX_RECORDS
-                            )
-                        ]
+        if self.transaction_id:
+            start_transaction: bool = False
+        else:
+            self.begin(database=database)
+            start_transaction = True
+        try:
+            results_sets = list(
+                flatten(
+                    self.client.batch_execute_statement(
+                        **Options(
+                            resourceArn=self.resource_arn,
+                            secretArn=self.secret_arn,
+                            database=database or self.database,
+                            transactionId=transaction_id or self.transaction_id,
+                            parameterSets=chunked_parameter_sets,
+                            sql=query,
+                        ).build()
+                    )["updateResults"]
+                    for chunked_parameter_sets in chunked(
+                        parameter_sets or [], MAX_RECORDS
                     )
                 )
             )
+        except:
+            if start_transaction:
+                self.rollback()
+            raise
+        if start_transaction:
+            self.commit()
+        return UpdateResults(results_sets)
 
 
 def transaction(

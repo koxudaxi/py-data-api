@@ -716,7 +716,25 @@ def test_execute_insert_parameter_set(mocked_client, mocker) -> None:
     )
 
 
-def test_execute_insert_parameter_set_invalid(mocked_client, mocker) -> None:
+def test_execute_insert_parameter_set_invalid_1(mocked_client, mocker) -> None:
+    mocked_client.batch_execute_statement.side_effect = Exception('Invalid Request')
+
+    data_api = DataAPI(
+        resource_arn='dummy',
+        secret_arn='dummy',
+        database='test',
+        client=mocked_client,
+        transaction_id='12345',
+    )
+
+    with pytest.raises(Exception):
+        data_api.batch_execute(
+            "insert into test.pets  values (:id , :name)",
+            [{'id': 3, 'invalid': 'bird'}],
+        )
+
+
+def test_execute_insert_parameter_set_invalid_2(mocked_client, mocker) -> None:
     data_api = DataAPI(
         resource_arn='dummy', secret_arn='dummy', database='test', client=mocked_client
     )

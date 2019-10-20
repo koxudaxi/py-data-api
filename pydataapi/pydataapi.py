@@ -14,6 +14,7 @@ from typing import (
 )
 
 import boto3
+from more_itertools import chunked, flatten
 from pydantic import BaseModel, Field, root_validator, validator
 from pydataapi.exceptions import MultipleResultsFound, NoResultFound
 from sqlalchemy import Column
@@ -21,6 +22,8 @@ from sqlalchemy.dialects import mysql
 from sqlalchemy.engine import Dialect, default
 from sqlalchemy.orm.query import Query
 from sqlalchemy.sql import Delete, Insert, Select, Update
+
+MAX_RECORDS: int = 1000
 
 DIALECT: Dialect = mysql.dialect(paramstyle='named')
 
@@ -330,9 +333,9 @@ class Options(BaseModel):
 
     @validator('parameterSets', pre=True)
     def convert_parameter_sets(cls, v: Any) -> Any:
-        if isinstance(v, (list, tuple)):
+        if isinstance(v, (list, tuple)):  # pragma: no cover
             return [create_sql_parameters(parameter) for parameter in v]
-        return v
+        return v  # pragma: no cover
 
     @validator('sql', pre=True)
     def validate_sql(cls, v: Any) -> Any:
@@ -473,19 +476,36 @@ class DataAPI(AbstractContextManager):
         database: Optional[str] = None,
     ) -> UpdateResults:
 
-        options = Options(
-            resourceArn=self.resource_arn,
-            secretArn=self.secret_arn,
-            database=database or self.database,
-            transactionId=transaction_id or self.transaction_id,
-            parameterSets=parameter_sets,
-            sql=query,
-        )
-
-        response: Dict[str, Any] = self.client.batch_execute_statement(
-            **options.build()
-        )
-        return UpdateResults(response["updateResults"])
+        if self.transaction_id:
+            start_transaction: bool = False
+        else:
+            self.begin(database=database)
+            start_transaction = True
+        try:
+            results_sets = list(
+                flatten(
+                    self.client.batch_execute_statement(
+                        **Options(
+                            resourceArn=self.resource_arn,
+                            secretArn=self.secret_arn,
+                            database=database or self.database,
+                            transactionId=transaction_id or self.transaction_id,
+                            parameterSets=chunked_parameter_sets,
+                            sql=query,
+                        ).build()
+                    )["updateResults"]
+                    for chunked_parameter_sets in chunked(
+                        parameter_sets or [], MAX_RECORDS
+                    )
+                )
+            )
+        except:
+            if start_transaction:
+                self.rollback()
+            raise
+        if start_transaction:
+            self.commit()
+        return UpdateResults(results_sets)
 
 
 def transaction(

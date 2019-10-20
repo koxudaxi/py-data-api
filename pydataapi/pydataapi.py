@@ -333,9 +333,9 @@ class Options(BaseModel):
 
     @validator('parameterSets', pre=True)
     def convert_parameter_sets(cls, v: Any) -> Any:
-        if isinstance(v, (list, tuple)):   # pragma: no cover
+        if isinstance(v, (list, tuple)):  # pragma: no cover
             return [create_sql_parameters(parameter) for parameter in v]
-        return v   # pragma: no cover
+        return v  # pragma: no cover
 
     @validator('sql', pre=True)
     def validate_sql(cls, v: Any) -> Any:

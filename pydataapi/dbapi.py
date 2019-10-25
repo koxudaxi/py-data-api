@@ -197,6 +197,6 @@ def connect(
         transaction_id=transaction_id,
         client=client,
         rollback_exception=rollback_exception,
-        rds_client=client,
+        rds_client=rds_client,
         **kwargs
     )

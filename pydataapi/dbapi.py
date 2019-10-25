@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, Iterator, List, Optional, Sequence, Tuple, Type
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Type
 
 import boto3
 from pydantic import BaseModel
@@ -36,6 +36,7 @@ class ConnectArgs(BaseModel):
     transaction_id: Optional[str] = None
     client: Optional[Any] = None
     rollback_exception: Optional[Type[Exception]] = None
+    rds_client: Optional[Any] = None
 
 
 class Connection:
@@ -51,6 +52,7 @@ class Connection:
             connect_args.transaction_id,
             connect_args.client,
             connect_args.rollback_exception,
+            connect_args.rds_client,
         )
 
         self.closed = False
@@ -185,6 +187,7 @@ def connect(
     transaction_id: Optional[str] = None,
     client: Optional[boto3.session.Session.client] = None,
     rollback_exception: Optional[Type[Exception]] = None,
+    rds_client: Optional[boto3.session.Session.client] = None,
     **kwargs: Any
 ) -> Connection:
     return Connection(
@@ -194,5 +197,6 @@ def connect(
         transaction_id=transaction_id,
         client=client,
         rollback_exception=rollback_exception,
+        rds_client=client,
         **kwargs
     )

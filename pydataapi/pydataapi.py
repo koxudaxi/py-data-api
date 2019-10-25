@@ -347,6 +347,16 @@ class Options(BaseModel):
         return self.dict(skip_defaults=True, by_alias=True)
 
 
+def find_arn_by_resource_name(
+    resource_name: str, boto3_client: Optional[boto3.session.Session.client]
+) -> str:
+    if not boto3_client:
+        boto3_client = boto3.client('rds')
+    return boto3_client.describe_db_clusters(DBClusterIdentifier=resource_name)[
+        'DBClusters'
+    ][0]['DBClusterArn']
+
+
 class DataAPI(AbstractContextManager):
     def __init__(
         self,
@@ -356,8 +366,12 @@ class DataAPI(AbstractContextManager):
         transaction_id: Optional[str] = None,
         client: Optional[boto3.session.Session.client] = None,
         rollback_exception: Optional[Type[Exception]] = None,
+        rds_client: Optional[boto3.session.Session.client] = None,
     ) -> None:
-        self.resource_arn: str = resource_arn
+        if resource_arn.startswith('arn:aws:rds:'):
+            self.resource_arn: str = resource_arn
+        else:
+            self.resource_arn = find_arn_by_resource_name(resource_arn, rds_client)
         self.secret_arn: str = secret_arn
         self.database: Optional[str] = database
 

@@ -277,21 +277,45 @@ def test_update_results() -> None:
 def test_client(mocker) -> None:
     mock_client = mocker.Mock()
     data_api: DataAPI = DataAPI(
-        resource_arn='dummy', secret_arn='dummy', client=mock_client
+        resource_arn='arn:aws:rds:dummy', secret_arn='dummy', client=mock_client
     )
     assert data_api.client == mock_client
+
+
+def test_resource_arn(mocker, mocked_client) -> None:
+    mock_client = mocker.Mock()
+    mock_client.describe_db_clusters.return_value = {
+        'DBClusters': [{'DBClusterArn': 'arn:aws:rds:dummy'}]
+    }
+    data_api: DataAPI = DataAPI(
+        resource_arn='dummy',
+        secret_arn='dummy',
+        client=mock_client,
+        rds_client=mock_client,
+    )
+    assert data_api.resource_arn == 'arn:aws:rds:dummy'
+
+    mocked_client.return_value = mock_client
+
+    data_api: DataAPI = DataAPI(
+        resource_arn='dummy', secret_arn='dummy', client=mock_client
+    )
+    assert data_api.resource_arn == 'arn:aws:rds:dummy'
 
 
 def test_with_statement(mocked_client) -> None:
     mocked_client.begin_transaction.return_value = {'transactionId': 'abc'}
     with DataAPI(
-        resource_arn='dummy', secret_arn='dummy', database='test', client=mocked_client
+        resource_arn='arn:aws:rds:dummy',
+        secret_arn='dummy',
+        database='test',
+        client=mocked_client,
     ):
         mocked_client.begin_transaction.assert_called_once_with(
-            database='test', resourceArn='dummy', secretArn='dummy'
+            database='test', resourceArn='arn:aws:rds:dummy', secretArn='dummy'
         )
     mocked_client.commit_transaction.assert_called_once_with(
-        resourceArn='dummy', secretArn='dummy', transactionId='abc'
+        resourceArn='arn:aws:rds:dummy', secretArn='dummy', transactionId='abc'
     )
 
 
@@ -299,17 +323,17 @@ def test_with_statement_exception(mocked_client) -> None:
     mocked_client.begin_transaction.return_value = {'transactionId': 'abc'}
     with pytest.raises(Exception):
         with DataAPI(
-            resource_arn='dummy',
+            resource_arn='arn:aws:rds:dummy',
             secret_arn='dummy',
             database='test',
             client=mocked_client,
         ):
             mocked_client.begin_transaction.assert_called_once_with(
-                database='test', resourceArn='dummy', secretArn='dummy'
+                database='test', resourceArn='arn:aws:rds:dummy', secretArn='dummy'
             )
             raise Exception('error')
     mocked_client.rollback_transaction.assert_called_once_with(
-        resourceArn='dummy', secretArn='dummy', transactionId='abc'
+        resourceArn='arn:aws:rds:dummy', secretArn='dummy', transactionId='abc'
     )
 
 
@@ -320,32 +344,32 @@ def test_with_statement_custom_exception(mocked_client, mocker) -> None:
     mocked_client.begin_transaction.return_value = {'transactionId': 'abc'}
     with pytest.raises(CustomError):
         with DataAPI(
-            resource_arn='dummy',
+            resource_arn='arn:aws:rds:dummy',
             secret_arn='dummy',
             database='test',
             client=mocked_client,
             rollback_exception=CustomError,
         ):
             mocked_client.begin_transaction.assert_called_once_with(
-                database='test', resourceArn='dummy', secretArn='dummy'
+                database='test', resourceArn='arn:aws:rds:dummy', secretArn='dummy'
             )
             raise CustomError('error')
     mocked_client.rollback_transaction.assert_called_once_with(
-        resourceArn='dummy', secretArn='dummy', transactionId='abc'
+        resourceArn='arn:aws:rds:dummy', secretArn='dummy', transactionId='abc'
     )
 
     second_mocked_client = mocker.patch('boto3.client')
     second_mocked_client.begin_transaction.return_value = {'transactionId': 'abc'}
     with pytest.raises(Exception):
         with DataAPI(
-            resource_arn='dummy',
+            resource_arn='arn:aws:rds:dummy',
             secret_arn='dummy',
             database='test',
             client=second_mocked_client,
             rollback_exception=CustomError,
         ):
             second_mocked_client.begin_transaction.assert_called_once_with(
-                database='test', resourceArn='dummy', secretArn='dummy'
+                database='test', resourceArn='arn:aws:rds:dummy', secretArn='dummy'
             )
             raise Exception('error')
     second_mocked_client.rollback_transaction.assert_not_called()
@@ -354,17 +378,23 @@ def test_with_statement_custom_exception(mocked_client, mocker) -> None:
 def test_begin(mocked_client, mocker) -> None:
     mocked_client.begin_transaction.return_value = {'transactionId': 'abc'}
     data_api = DataAPI(
-        resource_arn='dummy', secret_arn='dummy', database='test', client=mocked_client
+        resource_arn='arn:aws:rds:dummy',
+        secret_arn='dummy',
+        database='test',
+        client=mocked_client,
     )
     assert data_api.begin(schema='schema') == 'abc'
     assert mocked_client.begin_transaction.call_args == mocker.call(
-        database='test', resourceArn='dummy', schema='schema', secretArn='dummy'
+        database='test',
+        resourceArn='arn:aws:rds:dummy',
+        schema='schema',
+        secretArn='dummy',
     )
 
 
 def test_transaction(mocked_client) -> None:
     data_api = DataAPI(
-        resource_arn='dummy',
+        resource_arn='arn:aws:rds:dummy',
         secret_arn='dummy',
         transaction_id='abc',
         client=mocked_client,
@@ -374,7 +404,7 @@ def test_transaction(mocked_client) -> None:
 
 def test_transaction_status(mocked_client) -> None:
     data_api = DataAPI(
-        resource_arn='dummy',
+        resource_arn='arn:aws:rds:dummy',
         secret_arn='dummy',
         transaction_id='abc',
         client=mocked_client,
@@ -386,22 +416,28 @@ def test_transaction_status(mocked_client) -> None:
 def test_commit(mocked_client, mocker) -> None:
     mocked_client.commit_transaction.return_value = {'transactionStatus': 'abc'}
     data_api = DataAPI(
-        resource_arn='dummy', secret_arn='dummy', database='test', client=mocked_client
+        resource_arn='arn:aws:rds:dummy',
+        secret_arn='dummy',
+        database='test',
+        client=mocked_client,
     )
     assert data_api.commit(transaction_id='abc') == 'abc'
     assert mocked_client.commit_transaction.call_args == mocker.call(
-        resourceArn='dummy', transactionId='abc', secretArn='dummy'
+        resourceArn='arn:aws:rds:dummy', transactionId='abc', secretArn='dummy'
     )
 
 
 def test_rollback(mocked_client, mocker) -> None:
     mocked_client.rollback_transaction.return_value = {'transactionStatus': 'abc'}
     data_api = DataAPI(
-        resource_arn='dummy', secret_arn='dummy', database='test', client=mocked_client
+        resource_arn='arn:aws:rds:dummy',
+        secret_arn='dummy',
+        database='test',
+        client=mocked_client,
     )
     assert data_api.rollback(transaction_id='abc') == 'abc'
     assert mocked_client.rollback_transaction.call_args == mocker.call(
-        resourceArn='dummy', transactionId='abc', secretArn='dummy'
+        resourceArn='arn:aws:rds:dummy', transactionId='abc', secretArn='dummy'
     )
 
 
@@ -411,7 +447,10 @@ def test_execute_insert(mocked_client, mocker) -> None:
         'numberOfRecordsUpdated': 1,
     }
     data_api = DataAPI(
-        resource_arn='dummy', secret_arn='dummy', database='test', client=mocked_client
+        resource_arn='arn:aws:rds:dummy',
+        secret_arn='dummy',
+        database='test',
+        client=mocked_client,
     )
     results = data_api.execute(
         "insert into pets values(1, 'cat')", transaction_id='abc'
@@ -421,7 +460,7 @@ def test_execute_insert(mocked_client, mocker) -> None:
     assert mocked_client.execute_statement.call_args == mocker.call(
         continueAfterTimeout=True,
         includeResultMetadata=True,
-        resourceArn='dummy',
+        resourceArn='arn:aws:rds:dummy',
         secretArn='dummy',
         transactionId='abc',
         sql="insert into pets values(1, 'cat')",
@@ -435,7 +474,10 @@ def test_execute_insert_parameters(mocked_client, mocker) -> None:
         'numberOfRecordsUpdated': 1,
     }
     data_api = DataAPI(
-        resource_arn='dummy', secret_arn='dummy', database='test', client=mocked_client
+        resource_arn='arn:aws:rds:dummy',
+        secret_arn='dummy',
+        database='test',
+        client=mocked_client,
     )
     results = data_api.execute(
         "insert into pets values(:id, :name)",
@@ -451,7 +493,7 @@ def test_execute_insert_parameters(mocked_client, mocker) -> None:
             {'name': 'id', 'value': {'longValue': 1}},
             {'name': 'name', 'value': {'stringValue': 'cat'}},
         ],
-        resourceArn='dummy',
+        resourceArn='arn:aws:rds:dummy',
         secretArn='dummy',
         transactionId='abc',
         sql="insert into pets values(:id, :name)",
@@ -465,14 +507,17 @@ def test_execute_select(mocked_client, mocker) -> None:
         'records': [[{'longValue': 1}, {'stringValue': 'cat'}]],
     }
     data_api = DataAPI(
-        resource_arn='dummy', secret_arn='dummy', database='test', client=mocked_client
+        resource_arn='arn:aws:rds:dummy',
+        secret_arn='dummy',
+        database='test',
+        client=mocked_client,
     )
     assert list(data_api.execute("select * from pets")[0]) == [1, 'cat']
     assert mocked_client.execute_statement.call_args == mocker.call(
         continueAfterTimeout=True,
         database='test',
         includeResultMetadata=True,
-        resourceArn='dummy',
+        resourceArn='arn:aws:rds:dummy',
         secretArn='dummy',
         sql='select * from pets',
     )
@@ -518,14 +563,17 @@ def test_execute_select_process_result_value(mocked_client, mocker) -> None:
         ],
     }
     data_api = DataAPI(
-        resource_arn='dummy', secret_arn='dummy', database='test', client=mocked_client
+        resource_arn='arn:aws:rds:dummy',
+        secret_arn='dummy',
+        database='test',
+        client=mocked_client,
     )
     assert list(data_api.execute(Select([Pets]))[0]) == [1, 'my_type_cat']
     assert mocked_client.execute_statement.call_args == mocker.call(
         continueAfterTimeout=True,
         database='test',
         includeResultMetadata=True,
-        resourceArn='dummy',
+        resourceArn='arn:aws:rds:dummy',
         secretArn='dummy',
         sql="""SELECT pets.id, pets.name 
 FROM pets""",
@@ -572,14 +620,17 @@ def test_execute_query_process_result_value(mocked_client, mocker) -> None:
         ],
     }
     data_api = DataAPI(
-        resource_arn='dummy', secret_arn='dummy', database='test', client=mocked_client
+        resource_arn='arn:aws:rds:dummy',
+        secret_arn='dummy',
+        database='test',
+        client=mocked_client,
     )
     assert list(data_api.execute(Query(Pets))[0]) == [1, 'my_type_cat']
     assert mocked_client.execute_statement.call_args == mocker.call(
         continueAfterTimeout=True,
         database='test',
         includeResultMetadata=True,
-        resourceArn='dummy',
+        resourceArn='arn:aws:rds:dummy',
         secretArn='dummy',
         sql="""SELECT pets.id, pets.name 
 FROM pets""",
@@ -626,7 +677,10 @@ def test_execute_select_as_model(mocked_client, mocker) -> None:
         'records': [[{'longValue': 1}, {'stringValue': 'cat'}]],
     }
     data_api = DataAPI(
-        resource_arn='dummy', secret_arn='dummy', database='test', client=mocked_client
+        resource_arn='arn:aws:rds:dummy',
+        secret_arn='dummy',
+        database='test',
+        client=mocked_client,
     )
 
     class Pet(BaseModel):
@@ -641,7 +695,7 @@ def test_execute_select_as_model(mocked_client, mocker) -> None:
         continueAfterTimeout=True,
         database='test',
         includeResultMetadata=True,
-        resourceArn='dummy',
+        resourceArn='arn:aws:rds:dummy',
         secretArn='dummy',
         sql='select * from pets',
     )
@@ -658,7 +712,10 @@ def test_execute_select_query(mocked_client, mocker) -> None:
         'records': [[{'longValue': 1}, {'stringValue': 'cat'}]],
     }
     data_api = DataAPI(
-        resource_arn='dummy', secret_arn='dummy', database='test', client=mocked_client
+        resource_arn='arn:aws:rds:dummy',
+        secret_arn='dummy',
+        database='test',
+        client=mocked_client,
     )
     result = data_api.execute(Query(Users).filter(Users.id == 1))
     assert len(result) == 1
@@ -668,7 +725,7 @@ def test_execute_select_query(mocked_client, mocker) -> None:
         continueAfterTimeout=True,
         database='test',
         includeResultMetadata=True,
-        resourceArn='dummy',
+        resourceArn='arn:aws:rds:dummy',
         secretArn='dummy',
         sql='SELECT users.id, users.name \nFROM users \nWHERE users.id = 1',
     )
@@ -685,7 +742,10 @@ def test_execute_insert_parameter_set(mocked_client, mocker) -> None:
     mocked_client.begin_transaction.return_value = {'transactionId': '12345'}
 
     data_api = DataAPI(
-        resource_arn='dummy', secret_arn='dummy', database='test', client=mocked_client
+        resource_arn='arn:aws:rds:dummy',
+        secret_arn='dummy',
+        database='test',
+        client=mocked_client,
     )
     results = data_api.batch_execute(
         "insert into test.pets  values (:id , :name)",
@@ -698,7 +758,7 @@ def test_execute_insert_parameter_set(mocked_client, mocker) -> None:
     assert results[1].generated_fields_first == 4
 
     assert mocked_client.batch_execute_statement.call_args == mocker.call(
-        resourceArn='dummy',
+        resourceArn='arn:aws:rds:dummy',
         secretArn='dummy',
         sql="insert into test.pets  values (:id , :name)",
         parameterSets=[
@@ -720,7 +780,7 @@ def test_execute_insert_parameter_set_invalid_1(mocked_client, mocker) -> None:
     mocked_client.batch_execute_statement.side_effect = Exception('Invalid Request')
 
     data_api = DataAPI(
-        resource_arn='dummy',
+        resource_arn='arn:aws:rds:dummy',
         secret_arn='dummy',
         database='test',
         client=mocked_client,
@@ -736,7 +796,10 @@ def test_execute_insert_parameter_set_invalid_1(mocked_client, mocker) -> None:
 
 def test_execute_insert_parameter_set_invalid_2(mocked_client, mocker) -> None:
     data_api = DataAPI(
-        resource_arn='dummy', secret_arn='dummy', database='test', client=mocked_client
+        resource_arn='arn:aws:rds:dummy',
+        secret_arn='dummy',
+        database='test',
+        client=mocked_client,
     )
 
     with pytest.raises(ValidationError):
@@ -747,7 +810,10 @@ def test_execute_insert_parameter_set_invalid_2(mocked_client, mocker) -> None:
 
 def test_transaction_add_user(mocked_client):
     @transaction(
-        resource_arn='dummy', secret_arn='dummy', database='test', client=mocked_client
+        resource_arn='arn:aws:rds:dummy',
+        secret_arn='dummy',
+        database='test',
+        client=mocked_client,
     )
     def add_user(data_api: DataAPI, id_, name):
         data_api.execute(f"insert into pets values({id_}, {name})")
@@ -755,8 +821,8 @@ def test_transaction_add_user(mocked_client):
     mocked_client.begin_transaction.return_value = {'transactionId': 'abc'}
     add_user(1, 'cat')
     mocked_client.begin_transaction.assert_called_once_with(
-        database='test', resourceArn='dummy', secretArn='dummy'
+        database='test', resourceArn='arn:aws:rds:dummy', secretArn='dummy'
     )
     mocked_client.commit_transaction.assert_called_once_with(
-        resourceArn='dummy', secretArn='dummy', transactionId='abc'
+        resourceArn='arn:aws:rds:dummy', secretArn='dummy', transactionId='abc'
     )

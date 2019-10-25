@@ -7,11 +7,30 @@ def mocked_client(mocker):
     return mocker.patch('boto3.client')
 
 
+def test_resource_arn(mocker, mocked_client) -> None:
+    mock_client = mocker.Mock()
+    mock_client.describe_db_clusters.return_value = {
+        'DBClusters': [{'DBClusterArn': 'arn:aws:rds:dummy'}]
+    }
+    data_api = connect(
+        resource_arn='dummy',
+        secret_arn='dummy',
+        client=mock_client,
+        rds_client=mock_client,
+    )
+    assert data_api._data_api.resource_arn == 'arn:aws:rds:dummy'
+
+    mocked_client.return_value = mock_client
+
+    data_api = connect(resource_arn='dummy', secret_arn='dummy', client=mock_client)
+    assert data_api._data_api.resource_arn == 'arn:aws:rds:dummy'
+
+
 def test_commit(mocked_client, mocker) -> None:
     mocked_client.commit_transaction.return_value = {'transactionStatus': 'abc'}
 
     data_api = connect(
-        resource_arn='dummy',
+        resource_arn='arn:aws:rds:dummy',
         secret_arn='dummy',
         database='test',
         client=mocked_client,
@@ -19,14 +38,17 @@ def test_commit(mocked_client, mocker) -> None:
     )
     data_api.commit()
     assert mocked_client.commit_transaction.call_args == mocker.call(
-        resourceArn='dummy', transactionId='abc', secretArn='dummy'
+        resourceArn='arn:aws:rds:dummy', transactionId='abc', secretArn='dummy'
     )
 
 
 def test_commit_not_called(mocked_client, mocker) -> None:
 
     data_api = connect(
-        resource_arn='dummy', secret_arn='dummy', database='test', client=mocked_client
+        resource_arn='arn:aws:rds:dummy',
+        secret_arn='dummy',
+        database='test',
+        client=mocked_client,
     )
     data_api.commit()
     mocked_client.commit_transaction.assert_not_called()
@@ -35,7 +57,7 @@ def test_commit_not_called(mocked_client, mocker) -> None:
 def test_rollback(mocked_client, mocker) -> None:
     mocked_client.rollback_transaction.return_value = {'transactionStatus': 'abc'}
     data_api = connect(
-        resource_arn='dummy',
+        resource_arn='arn:aws:rds:dummy',
         secret_arn='dummy',
         database='test',
         client=mocked_client,
@@ -43,13 +65,16 @@ def test_rollback(mocked_client, mocker) -> None:
     )
     data_api.rollback()
     assert mocked_client.rollback_transaction.call_args == mocker.call(
-        resourceArn='dummy', transactionId='abc', secretArn='dummy'
+        resourceArn='arn:aws:rds:dummy', transactionId='abc', secretArn='dummy'
     )
 
 
 def test_rollback_not_called(mocked_client) -> None:
     data_api = connect(
-        resource_arn='dummy', secret_arn='dummy', database='test', client=mocked_client
+        resource_arn='arn:aws:rds:dummy',
+        secret_arn='dummy',
+        database='test',
+        client=mocked_client,
     )
     data_api.rollback()
     mocked_client.rollback_transaction.assert_not_called()
@@ -62,7 +87,10 @@ def test_execute_insert(mocked_client, mocker) -> None:
         'numberOfRecordsUpdated': 1,
     }
     data_api = connect(
-        resource_arn='dummy', secret_arn='dummy', database='test', client=mocked_client
+        resource_arn='arn:aws:rds:dummy',
+        secret_arn='dummy',
+        database='test',
+        client=mocked_client,
     )
     results = data_api.execute("insert into pets values(1, 'cat')")
     assert list(results.fetchall()) == []
@@ -70,7 +98,7 @@ def test_execute_insert(mocked_client, mocker) -> None:
     assert mocked_client.execute_statement.call_args == mocker.call(
         continueAfterTimeout=True,
         includeResultMetadata=True,
-        resourceArn='dummy',
+        resourceArn='arn:aws:rds:dummy',
         secretArn='dummy',
         sql="insert into pets values(1, 'cat')",
         database='test',
@@ -85,7 +113,10 @@ def test_execute_insert_parameters(mocked_client, mocker) -> None:
         'numberOfRecordsUpdated': 1,
     }
     data_api = connect(
-        resource_arn='dummy', secret_arn='dummy', database='test', client=mocked_client
+        resource_arn='arn:aws:rds:dummy',
+        secret_arn='dummy',
+        database='test',
+        client=mocked_client,
     )
     results = data_api.execute(
         "insert into pets values(:id, :name)", {'id': 1, 'name': 'cat'}
@@ -99,7 +130,7 @@ def test_execute_insert_parameters(mocked_client, mocker) -> None:
             {'name': 'id', 'value': {'longValue': 1}},
             {'name': 'name', 'value': {'stringValue': 'cat'}},
         ],
-        resourceArn='dummy',
+        resourceArn='arn:aws:rds:dummy',
         secretArn='dummy',
         sql="insert into pets values(:id, :name)",
         database='test',
@@ -114,7 +145,10 @@ def test_execute_select(mocked_client, mocker) -> None:
         'records': [[{'longValue': 1}, {'stringValue': 'cat'}]],
     }
     data_api = connect(
-        resource_arn='dummy', secret_arn='dummy', database='test', client=mocked_client
+        resource_arn='arn:aws:rds:dummy',
+        secret_arn='dummy',
+        database='test',
+        client=mocked_client,
     )
     result = data_api.cursor().execute("select * from pets")
     assert result.rowcount == 1
@@ -124,7 +158,7 @@ def test_execute_select(mocked_client, mocker) -> None:
         continueAfterTimeout=True,
         database='test',
         includeResultMetadata=True,
-        resourceArn='dummy',
+        resourceArn='arn:aws:rds:dummy',
         secretArn='dummy',
         sql='select * from pets',
         transactionId='abc',
@@ -145,7 +179,10 @@ def test_execute_select_fetch_many(mocked_client, mocker) -> None:
         ],
     }
     data_api = connect(
-        resource_arn='dummy', secret_arn='dummy', database='test', client=mocked_client
+        resource_arn='arn:aws:rds:dummy',
+        secret_arn='dummy',
+        database='test',
+        client=mocked_client,
     )
     result = data_api.cursor().execute("select * from pets")
     assert result.rowcount == 3
@@ -155,7 +192,7 @@ def test_execute_select_fetch_many(mocked_client, mocker) -> None:
         continueAfterTimeout=True,
         database='test',
         includeResultMetadata=True,
-        resourceArn='dummy',
+        resourceArn='arn:aws:rds:dummy',
         secretArn='dummy',
         sql='select * from pets',
         transactionId='abc',
@@ -176,7 +213,10 @@ def test_execute_select_iter(mocked_client, mocker) -> None:
         ],
     }
     data_api = connect(
-        resource_arn='dummy', secret_arn='dummy', database='test', client=mocked_client
+        resource_arn='arn:aws:rds:dummy',
+        secret_arn='dummy',
+        database='test',
+        client=mocked_client,
     )
     result = data_api.cursor().execute("select * from pets")
     result_iter = iter(result)
@@ -187,7 +227,7 @@ def test_execute_select_iter(mocked_client, mocker) -> None:
         continueAfterTimeout=True,
         database='test',
         includeResultMetadata=True,
-        resourceArn='dummy',
+        resourceArn='arn:aws:rds:dummy',
         secretArn='dummy',
         sql='select * from pets',
         transactionId='abc',
@@ -207,7 +247,10 @@ def test_execute_insert_parameter_set(mocked_client, mocker) -> None:
     }
 
     data_api = connect(
-        resource_arn='dummy', secret_arn='dummy', database='test', client=mocked_client
+        resource_arn='arn:aws:rds:dummy',
+        secret_arn='dummy',
+        database='test',
+        client=mocked_client,
     )
     results = data_api.cursor().executemany(
         "insert into test.pets  values (:id , :name)",
@@ -219,7 +262,7 @@ def test_execute_insert_parameter_set(mocked_client, mocker) -> None:
     assert results.lastrowid == 4
 
     assert mocked_client.batch_execute_statement.call_args == mocker.call(
-        resourceArn='dummy',
+        resourceArn='arn:aws:rds:dummy',
         secretArn='dummy',
         sql="insert into test.pets  values (:id , :name)",
         parameterSets=[
@@ -240,13 +283,16 @@ def test_execute_insert_parameter_set(mocked_client, mocker) -> None:
 def test_with_statement(mocked_client) -> None:
     mocked_client.begin_transaction.return_value = {'transactionId': 'abc'}
     with connect(
-        resource_arn='dummy', secret_arn='dummy', database='test', client=mocked_client
+        resource_arn='arn:aws:rds:dummy',
+        secret_arn='dummy',
+        database='test',
+        client=mocked_client,
     ):
         mocked_client.begin_transaction.assert_called_once_with(
-            database='test', resourceArn='dummy', secretArn='dummy'
+            database='test', resourceArn='arn:aws:rds:dummy', secretArn='dummy'
         )
     mocked_client.commit_transaction.assert_called_once_with(
-        resourceArn='dummy', secretArn='dummy', transactionId='abc'
+        resourceArn='arn:aws:rds:dummy', secretArn='dummy', transactionId='abc'
     )
 
 
@@ -254,17 +300,17 @@ def test_with_statement_exception(mocked_client) -> None:
     mocked_client.begin_transaction.return_value = {'transactionId': 'abc'}
     with pytest.raises(Exception):
         with connect(
-            resource_arn='dummy',
+            resource_arn='arn:aws:rds:dummy',
             secret_arn='dummy',
             database='test',
             client=mocked_client,
         ):
             mocked_client.begin_transaction.assert_called_once_with(
-                database='test', resourceArn='dummy', secretArn='dummy'
+                database='test', resourceArn='arn:aws:rds:dummy', secretArn='dummy'
             )
             raise Exception('error')
     mocked_client.rollback_transaction.assert_called_once_with(
-        resourceArn='dummy', secretArn='dummy', transactionId='abc'
+        resourceArn='arn:aws:rds:dummy', secretArn='dummy', transactionId='abc'
     )
 
 
@@ -275,32 +321,32 @@ def test_with_statement_custom_exception(mocked_client, mocker) -> None:
     mocked_client.begin_transaction.return_value = {'transactionId': 'abc'}
     with pytest.raises(CustomError):
         with connect(
-            resource_arn='dummy',
+            resource_arn='arn:aws:rds:dummy',
             secret_arn='dummy',
             database='test',
             client=mocked_client,
             rollback_exception=CustomError,
         ):
             mocked_client.begin_transaction.assert_called_once_with(
-                database='test', resourceArn='dummy', secretArn='dummy'
+                database='test', resourceArn='arn:aws:rds:dummy', secretArn='dummy'
             )
             raise CustomError('error')
     mocked_client.rollback_transaction.assert_called_once_with(
-        resourceArn='dummy', secretArn='dummy', transactionId='abc'
+        resourceArn='arn:aws:rds:dummy', secretArn='dummy', transactionId='abc'
     )
 
     second_mocked_client = mocker.patch('boto3.client')
     second_mocked_client.begin_transaction.return_value = {'transactionId': 'abc'}
     with pytest.raises(Exception):
         with connect(
-            resource_arn='dummy',
+            resource_arn='arn:aws:rds:dummy',
             secret_arn='dummy',
             database='test',
             client=second_mocked_client,
             rollback_exception=CustomError,
         ):
             second_mocked_client.begin_transaction.assert_called_once_with(
-                database='test', resourceArn='dummy', secretArn='dummy'
+                database='test', resourceArn='arn:aws:rds:dummy', secretArn='dummy'
             )
             raise Exception('error')
     second_mocked_client.rollback_transaction.assert_not_called()

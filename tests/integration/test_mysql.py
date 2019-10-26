@@ -72,7 +72,10 @@ def rds_data_client(db_connection, create_table):
 
 def test_simple_execute(rds_data_client):
     data_api = DataAPI(
-        resource_arn, secret_arn, database=database, client=rds_data_client
+        resource_arn=resource_arn,
+        secret_arn=secret_arn,
+        database=database,
+        client=rds_data_client,
     )
     result: Result = data_api.execute('show tables')
     assert len(result.one()) == 1
@@ -144,7 +147,7 @@ def test_with_statement(rds_data_client, db_connection):
 
 def test_rollback(rds_data_client, db_connection):
     try:
-        with DataAPI(resource_arn, secret_arn) as data_api:
+        with DataAPI(resource_arn=resource_arn, secret_arn=secret_arn) as data_api:
             data_api.execute(Insert(Pets, {'name': 'dog'}))
             # you can rollback by Exception
             raise Exception
@@ -170,8 +173,8 @@ def test_rollback_with_custom_exception(db_connection):
 
     try:
         with DataAPI(
-            resource_arn,
-            secret_arn,
+            resource_arn=resource_arn,
+            secret_arn=secret_arn,
             rollback_exception=OriginalError,
             database=database,
             client=rds_data_client,
@@ -185,8 +188,8 @@ def test_rollback_with_custom_exception(db_connection):
 
     try:
         with DataAPI(
-            resource_arn,
-            secret_arn,
+            resource_arn=resource_arn,
+            secret_arn=secret_arn,
             rollback_exception=OriginalError,
             database=database,
             client=rds_data_client,

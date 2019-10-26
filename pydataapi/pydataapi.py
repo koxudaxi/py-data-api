@@ -16,7 +16,7 @@ from typing import (
 import boto3
 from more_itertools import chunked, flatten
 from pydantic import BaseModel, Field, root_validator, validator
-from pydataapi.exceptions import MultipleResultsFound, NoResultFound
+from pydataapi.exceptions import DataAPIError, MultipleResultsFound, NoResultFound
 from sqlalchemy import Column
 from sqlalchemy.dialects import mysql
 from sqlalchemy.engine import Dialect, default
@@ -347,16 +347,38 @@ class Options(BaseModel):
         return self.dict(skip_defaults=True, by_alias=True)
 
 
+def find_arn_by_resource_name(
+    resource_name: str, boto3_client: Optional[boto3.session.Session.client]
+) -> str:
+    if not boto3_client:
+        boto3_client = boto3.client('rds')
+    return boto3_client.describe_db_clusters(DBClusterIdentifier=resource_name)[
+        'DBClusters'
+    ][0]['DBClusterArn']
+
+
 class DataAPI(AbstractContextManager):
     def __init__(
         self,
-        resource_arn: str,
+        *,
         secret_arn: str,
+        resource_arn: Optional[str] = None,
+        resource_name: Optional[str] = None,
         database: Optional[str] = None,
         transaction_id: Optional[str] = None,
         client: Optional[boto3.session.Session.client] = None,
         rollback_exception: Optional[Type[Exception]] = None,
+        rds_client: Optional[boto3.session.Session.client] = None,
     ) -> None:
+        if resource_name:
+            if resource_arn:
+                raise DataAPIError(
+                    f'resource_name should be set without resource_arn. resource_arn: {resource_arn},'
+                    f' resource_name: {resource_name}'
+                )
+            resource_arn = find_arn_by_resource_name(resource_name, rds_client)
+        if not resource_arn:
+            raise DataAPIError('Not Found resource_arn.')
         self.resource_arn: str = resource_arn
         self.secret_arn: str = secret_arn
         self.database: Optional[str] = database
@@ -509,8 +531,9 @@ class DataAPI(AbstractContextManager):
 
 
 def transaction(
-    resource_arn: str,
     secret_arn: str,
+    resource_arn: Optional[str] = None,
+    resource_name: Optional[str] = None,
     database: Optional[str] = None,
     transaction_id: Optional[str] = None,
     client: Optional[boto3.session.Session.client] = None,
@@ -520,12 +543,13 @@ def transaction(
         @wraps(func)
         def wrap(*args: Any, **kwargs: Any) -> Any:
             with DataAPI(
-                resource_arn,
-                secret_arn,
-                database,
-                transaction_id,
-                client,
-                rollback_exception,
+                secret_arn=secret_arn,
+                resource_arn=resource_arn,
+                resource_name=resource_name,
+                database=database,
+                transaction_id=transaction_id,
+                client=client,
+                rollback_exception=rollback_exception,
             ) as data_api:
                 result: Any = func(data_api, *args, **kwargs)
             return result

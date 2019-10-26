@@ -129,14 +129,14 @@ def add_pets(data_api: DataAPI, pet_names: List[str]) -> None:
 
 
 def example_simple_execute():
-    data_api = DataAPI(resource_arn, secret_arn, database=database)
+    data_api = DataAPI(resource_arn=resource_arn, secret_arn=secret_arn, database=database)
     result: Result = data_api.execute('show tables')
     print(result.scalar())
     # Pets
 
 
 def example_rollback():
-    with DataAPI(resource_arn, secret_arn) as data_api:
+    with DataAPI(resource_arn=resource_arn, secret_arn=secret_arn) as data_api:
         data_api.execute(Insert(Pets, {'name': 'dog'}))
         # you can rollback by Exception
         raise Exception
@@ -146,7 +146,7 @@ def example_rollback_with_custom_exception():
     class OriginalError(Exception):
         pass
 
-    with DataAPI(resource_arn, secret_arn, rollback_exception=OriginalError) as data_api:
+    with DataAPI(resource_arn=resource_arn, secret_arn=secret_arn, rollback_exception=OriginalError) as data_api:
 
         data_api.execute(Insert(Pets, {'name': 'dog'}))
         # some logic ...

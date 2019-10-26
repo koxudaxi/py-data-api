@@ -30,8 +30,9 @@ class Error(Exception):
 
 
 class ConnectArgs(BaseModel):
-    resource_arn: str
     secret_arn: str
+    resource_arn: Optional[str]
+    resource_name: Optional[str]
     database: Optional[str] = None
     transaction_id: Optional[str] = None
     client: Optional[Any] = None
@@ -46,13 +47,14 @@ class Connection:
     def __init__(self, **kwargs: Any) -> None:
         connect_args = ConnectArgs.parse_obj(kwargs)
         self._data_api = DataAPI(
-            connect_args.resource_arn,
-            connect_args.secret_arn,
-            connect_args.database,
-            connect_args.transaction_id,
-            connect_args.client,
-            connect_args.rollback_exception,
-            connect_args.rds_client,
+            secret_arn=connect_args.secret_arn,
+            resource_arn=connect_args.resource_arn,
+            resource_name=connect_args.resource_name,
+            database=connect_args.database,
+            transaction_id=connect_args.transaction_id,
+            client=connect_args.client,
+            rollback_exception=connect_args.rollback_exception,
+            rds_client=connect_args.rds_client,
         )
 
         self.closed = False
@@ -181,8 +183,9 @@ class Cursor:
 
 
 def connect(
-    resource_arn: str,
     secret_arn: str,
+    resource_arn: Optional[str] = None,
+    resource_name: Optional[str] = None,
     database: Optional[str] = None,
     transaction_id: Optional[str] = None,
     client: Optional[boto3.session.Session.client] = None,
@@ -191,8 +194,9 @@ def connect(
     **kwargs: Any
 ) -> Connection:
     return Connection(
-        resource_arn=resource_arn,
         secret_arn=secret_arn,
+        resource_arn=resource_arn,
+        resource_name=resource_name,
         database=database,
         transaction_id=transaction_id,
         client=client,

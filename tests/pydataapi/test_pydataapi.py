@@ -1,7 +1,7 @@
 import pytest
 import sqlalchemy.types as types
 from pydantic import BaseModel, ValidationError
-from pydataapi.exceptions import MultipleResultsFound, NoResultFound
+from pydataapi.exceptions import DataAPIError, MultipleResultsFound, NoResultFound
 from pydataapi.pydataapi import (
     DataAPI,
     GeneratedFields,
@@ -288,7 +288,7 @@ def test_resource_arn(mocker, mocked_client) -> None:
         'DBClusters': [{'DBClusterArn': 'arn:aws:rds:dummy'}]
     }
     data_api: DataAPI = DataAPI(
-        resource_arn='dummy',
+        resource_name='dummy',
         secret_arn='dummy',
         client=mock_client,
         rds_client=mock_client,
@@ -298,9 +298,36 @@ def test_resource_arn(mocker, mocked_client) -> None:
     mocked_client.return_value = mock_client
 
     data_api: DataAPI = DataAPI(
-        resource_arn='dummy', secret_arn='dummy', client=mock_client
+        resource_name='dummy', secret_arn='dummy', client=mock_client
     )
     assert data_api.resource_arn == 'arn:aws:rds:dummy'
+
+
+def test_not_found_resource_arn_and_resource_arn(mocker, mocked_client) -> None:
+    mock_client = mocker.Mock()
+    mock_client.describe_db_clusters.return_value = {
+        'DBClusters': [{'DBClusterArn': 'arn:aws:rds:dummy'}]
+    }
+    with pytest.raises(DataAPIError, match='Not Found resource_arn.'):
+        DataAPI(secret_arn='dummy', client=mock_client, rds_client=mock_client)
+
+
+def test_found_resource_arn_and_resource_arn(mocker, mocked_client) -> None:
+    mock_client = mocker.Mock()
+    mock_client.describe_db_clusters.return_value = {
+        'DBClusters': [{'DBClusterArn': 'arn:aws:rds:dummy'}]
+    }
+    with pytest.raises(
+        DataAPIError,
+        match='resource_name should be set without resource_arn. resource_arn: arn:aws:rds:dummy, resource_name: dummy',
+    ):
+        DataAPI(
+            resource_arn='arn:aws:rds:dummy',
+            resource_name='dummy',
+            secret_arn='dummy',
+            client=mock_client,
+            rds_client=mock_client,
+        )
 
 
 def test_with_statement(mocked_client) -> None:

@@ -13,7 +13,7 @@ def test_resource_arn(mocker, mocked_client) -> None:
         'DBClusters': [{'DBClusterArn': 'arn:aws:rds:dummy'}]
     }
     data_api = connect(
-        resource_arn='dummy',
+        resource_name='dummy',
         secret_arn='dummy',
         client=mock_client,
         rds_client=mock_client,
@@ -22,7 +22,9 @@ def test_resource_arn(mocker, mocked_client) -> None:
 
     mocked_client.return_value = mock_client
 
-    data_api = connect(resource_arn='dummy', secret_arn='dummy', client=mock_client)
+    data_api = connect(
+        resource_arn='arn:aws:rds:dummy', secret_arn='dummy', client=mock_client
+    )
     assert data_api._data_api.resource_arn == 'arn:aws:rds:dummy'
 
 

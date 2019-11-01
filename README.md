@@ -2,7 +2,9 @@
 
 [![Build Status](https://travis-ci.org/koxudaxi/py-data-api.svg?branch=master)](https://travis-ci.org/koxudaxi/py-data-api)
 [![PyPI version](https://badge.fury.io/py/pydataapi.svg)](https://badge.fury.io/py/pydataapi)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pydataapi)](https://pypi.python.org/pypi/pydataapi)
 [![codecov](https://codecov.io/gh/koxudaxi/py-data-api/branch/master/graph/badge.svg)](https://codecov.io/gh/koxudaxi/py-data-api)
+![license](https://img.shields.io/github/license/koxudaxi/py-data-api.svg)
 
 py-data-api is a user-friendly client which supports SQLAlchemy models.
 Also, the package includes DB API 2.0 Client and SQLAlchemy Dialects.

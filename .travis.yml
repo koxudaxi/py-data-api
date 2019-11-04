@@ -13,8 +13,7 @@ services:
 script:
   -  ./scripts/test.sh
   -  ./scripts/lint.sh
-  - cp README.md docs/index.md && mkdocs build --verbose --clean --strict
-
+  -  ./scripts/build_site.sh
 after_success:
   - codecov
 

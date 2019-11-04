@@ -19,3 +19,4 @@ google_analytics:
 
 nav:
     - py-data-api: 'index.md'
+    - 'Contributing': 'contributing.md'

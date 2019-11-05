@@ -176,7 +176,7 @@ def example_driver_for_sqlalchemy():
 ## Contributing to pydataapi
 We are waiting for your contributions to `pydataapi`.
 
-[https://koxudaxi.github.io/py-data-api/contribute](https://koxudaxi.github.io/py-data-api)
+[https://koxudaxi.github.io/py-data-api/contribute](https://koxudaxi.github.io/py-data-api/contribute)
 
 
 ## Related projects

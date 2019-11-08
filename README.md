@@ -11,8 +11,12 @@ Also, the package includes DB API 2.0 Client and SQLAlchemy Dialects.
 
 ## Features
 - A user-friendly client which supports SQLAlchemy models
-- SQLAlchemy Dialects (experimental)
+- SQLAlchemy Dialects
 - DB API 2.0 compatible client [PEP 249](https://www.python.org/dev/peps/pep-0249/)
+
+## Support Database Engines
+- MySQL
+- PostgreSQL
 
 ## What's AWS Aurora Serverless's Data API?
 https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/data-api.html

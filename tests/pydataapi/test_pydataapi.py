@@ -1,3 +1,5 @@
+from typing import Any, Dict
+
 import pytest
 import sqlalchemy.types as types
 from pydantic import BaseModel, ValidationError
@@ -8,6 +10,8 @@ from pydataapi.pydataapi import (
     Record,
     Result,
     UpdateResults,
+    _get_value_from_row,
+    convert_array_value,
     convert_value,
     create_sql_parameters,
     generate_sql,
@@ -37,20 +41,67 @@ def mocked_client(mocker):
     return mocker.patch('boto3.client')
 
 
-def test_convert_value() -> None:
-    assert convert_value('str') == {'stringValue': 'str'}
-    assert convert_value(123), {'longValue': 123}
-    assert convert_value(1.23), {'doubleValue': 1.23}
-    assert convert_value(True), {'booleanValue': True}
-    assert convert_value(False), {'booleanValue': False}
-    assert convert_value(b'bytes'), {'blobValue': b'bytes'}
-    assert convert_value(None), {'isNull': True}
+@pytest.mark.parametrize(
+    'input_value, expected',
+    [
+        ('str', {'stringValue': 'str'}),
+        (123, {'longValue': 123}),
+        (1.23, {'doubleValue': 1.23}),
+        (True, {'booleanValue': True}),
+        (False, {'booleanValue': False}),
+        (b'bytes', {'blobValue': b'bytes'}),
+        (None, {'isNull': True}),
+        ([], {'isNull': True}),
+        ('str', {'stringValue': 'str'}),
+        ([123, 456], {'arrayValue': {'longValues': [123, 456]}}),
+        ([1.23, 4.56], {'arrayValue': {'doubleValues': [1.23, 4.56]}}),
+        ([True, False], {'arrayValue': {'booleanValues': [True, False]}}),
+        ([b'bytes', b'blob'], {'arrayValue': {'blobValues': [b'bytes', b'blob']}}),
+    ],
+)
+def test_convert_value(input_value: Any, expected: Dict[str, Any]) -> None:
+    assert convert_value(input_value) == expected
 
+
+def test_convert_value_fail() -> None:
     class Dummy:
         pass
 
     with pytest.raises(Exception):
         convert_value(Dummy())
+
+
+@pytest.mark.parametrize(
+    'input_value, expected',
+    [
+        (['str', 'string'], {'arrayValue': {'stringValues': ['str', 'string']}}),
+        ([123, 456], {'arrayValue': {'longValues': [123, 456]}}),
+        ([1.23, 4.56], {'arrayValue': {'doubleValues': [1.23, 4.56]}}),
+        ([True, False], {'arrayValue': {'booleanValues': [True, False]}}),
+        ([b'bytes', b'blob'], {'arrayValue': {'blobValues': [b'bytes', b'blob']}}),
+        (
+            [[123, 456], [789]],
+            {
+                'arrayValue': {
+                    'arrayValues': [
+                        {'arrayValue': {'longValues': [123, 456]}},
+                        {'arrayValue': {'longValues': [789]}},
+                    ]
+                }
+            },
+        ),
+    ],
+)
+def test_convert_array_value(input_value: Any, expected: Dict[str, Any]) -> None:
+    assert convert_array_value(input_value) == expected
+
+
+def test_convert_arrary_value_fail() -> None:
+    class Dummy:
+        pass
+
+    with pytest.raises(Exception):
+        convert_array_value([Dummy()])
 
 
 def test_generate_sql() -> None:
@@ -68,6 +119,28 @@ def test_generate_sql() -> None:
         "FROM users \n"
         "WHERE users.id = 1"
     )
+
+
+@pytest.mark.parametrize(
+    'input_value, expected',
+    [
+        ({'arrayValue': {'stringValues': ['str', 'string']}}, ['str', 'string']),
+        ({'longValue': 123}, 123),
+        (
+            {
+                'arrayValue': {
+                    'arrayValues': [
+                        {'arrayValue': {'longValues': [123, 456]}},
+                        {'arrayValue': {'longValues': [789]}},
+                    ]
+                }
+            },
+            [[123, 456], [789]],
+        ),
+    ],
+)
+def test_get_value_from_row(input_value: Dict[str, Any], expected: Any) -> None:
+    assert _get_value_from_row(input_value) == expected
 
 
 def test_create_parameters() -> None:
@@ -162,6 +235,7 @@ def test_result() -> None:
             'records': [
                 [{'longValue': 1}, {'stringValue': 'dog'}],
                 [{'longValue': 2}, {'stringValue': 'cat'}],
+                [{'longValue': 3}, {'isNull': True}],
             ],
             "columnMetadata": column_metadata,
         }
@@ -169,17 +243,21 @@ def test_result() -> None:
 
     assert result[0] == [1, 'dog']
     assert result[1] == [2, 'cat']
-    dog, cat = result[0:2]
+    assert result[2] == [3, None]
+    dog, cat, none = result[0:3]
     assert dog == [1, 'dog']
     assert cat == [2, 'cat']
+    assert none == [3, None]
     assert next(result) == Record([1, 'dog'], ['id', 'name'])
     assert next(result) == Record([2, 'cat'], ['id', 'name'])
+    assert next(result) == Record([3, None], ['id', 'name'])
     with pytest.raises(StopIteration):
         next(result)
 
     assert result.all() == [
         Record([1, 'dog'], ['id', 'name']),
         Record([2, 'cat'], ['id', 'name']),
+        Record([3, None], ['id', 'name']),
     ]
     assert result.first() == Record([1, 'dog'], ['id', 'name'])
     with pytest.raises(MultipleResultsFound):

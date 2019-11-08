@@ -178,7 +178,7 @@ def _get_value_from_row(row: Dict[str, Any]) -> Any:
         array_value: Union[List[Dict[str, Dict]], Dict[str, List]] = value[array_key]
         if array_key == ARRAY_VALUES:
             return [
-                tuple(nested_value[ARRAY_VALUE].values())[0]
+                tuple(nested_value[ARRAY_VALUE].values())[0]  # type: ignore
                 for nested_value in array_value
             ]
         return array_value

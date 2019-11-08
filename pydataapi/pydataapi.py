@@ -8,6 +8,7 @@ from typing import (
     List,
     Optional,
     Sequence,
+    Tuple,
     Type,
     TypeVar,
     Union,
@@ -31,6 +32,20 @@ QUERY_STATEMENT_COMPILE_PARAMS = {
     'dialect': mysql.dialect(paramstyle='named'),
     'compile_kwargs': {"literal_binds": True},
 }
+
+BOOLEAN_VALUE: str = 'booleanValue'
+STRING_VALUE: str = 'stringValue'
+LONG_VALUE: str = 'longValue'
+DOUBLE_VALUE: str = 'doubleValue'
+BLOB_VALUE: str = 'blobValue'
+IS_NULL: str = 'isNull'
+ARRAY_VALUE: str = 'arrayValue'
+ARRAY_VALUES: str = 'arrayValues'
+BOOLEAN_VALUES: str = 'booleanValues'
+STRING_VALUES: str = 'stringValues'
+LONG_VALUES: str = 'longValues'
+DOUBLE_VALUES: str = 'doubleValues'
+BLOB_VALUES: str = 'blobValues'
 
 
 def generate_sql(query: Union[Query, Insert, Update, Delete, Select]) -> str:
@@ -96,19 +111,51 @@ def create_process_result_value_function_list(
     ]
 
 
+def convert_array_value(value: Union[List, Tuple]) -> Dict[str, Any]:
+    first_value: Any = value[0]
+    if isinstance(first_value, (list, tuple)):
+        return {
+            ARRAY_VALUE: {
+                ARRAY_VALUES: [
+                    convert_array_value(nested_value) for nested_value in value
+                ]
+            }
+        }
+
+    values_key: Optional[str] = None
+    if isinstance(first_value, bool):
+        values_key = BOOLEAN_VALUES
+    elif isinstance(first_value, str):
+        values_key = STRING_VALUES
+    elif isinstance(first_value, int):
+        values_key = LONG_VALUES
+    elif isinstance(first_value, float):
+        values_key = DOUBLE_VALUES
+    elif isinstance(first_value, bytes):
+        values_key = BLOB_VALUES
+    if values_key:
+        return {ARRAY_VALUE: {values_key: list(value)}}
+    raise Exception(f'unsupported array type {type(value[0])}]: {value} ')
+
+
 def convert_value(value: Any) -> Dict[str, Any]:
     if isinstance(value, bool):
-        return {'booleanValue': value}
+        return {BOOLEAN_VALUE: value}
     elif isinstance(value, str):
-        return {'stringValue': value}
+        return {STRING_VALUE: value}
     elif isinstance(value, int):
-        return {'longValue': value}
+        return {LONG_VALUE: value}
     elif isinstance(value, float):
-        return {'doubleValue': value}
+        return {DOUBLE_VALUE: value}
     elif isinstance(value, bytes):
-        return {'blobValue': value}
+        return {BLOB_VALUE: value}
     elif value is None:
-        return {'isNull': True}
+        return {IS_NULL: True}
+    elif isinstance(value, (list, tuple)):
+        if not value:
+            return {IS_NULL: True}
+        return convert_array_value(value)
+    # TODO: support structValue
     else:
         raise Exception(f'unsupported type {type(value)}: {value} ')
 
@@ -119,6 +166,23 @@ def create_sql_parameters(
     return [
         {'name': key, 'value': convert_value(value)} for key, value in parameter.items()
     ]
+
+
+def _get_value_from_row(row: Dict[str, Any]) -> Any:
+    key = tuple(row.keys())[0]
+    if key == IS_NULL:
+        return None
+    value = row[key]
+    if key == ARRAY_VALUE:
+        array_key: str = tuple(value.keys())[0]
+        array_value: Union[List[Dict[str, Dict]], Dict[str, List]] = value[array_key]
+        if array_key == ARRAY_VALUES:
+            return [
+                tuple(nested_value[ARRAY_VALUE].values())[0]
+                for nested_value in array_value
+            ]
+        return array_value
+    return value
 
 
 T = TypeVar('T')
@@ -137,7 +201,7 @@ class GeneratedFields:
     def generated_fields(self) -> List:
         if self._generated_fields is None:
             self._generated_fields = [
-                list(f.values())[0] for f in self._generated_fields_raw
+                _get_value_from_row(f) for f in self._generated_fields_raw
             ]
         return self._generated_fields
 
@@ -229,11 +293,7 @@ class Result(Sequence[Record], Iterator[Record], GeneratedFields):
         if process_result_value_function_list:
             self._rows: Sequence[List] = [
                 [
-                    process_result_value(
-                        None
-                        if tuple(column.keys())[0] == 'isNull'
-                        else tuple(column.values())[0]
-                    )
+                    process_result_value(_get_value_from_row(column))
                     for column, process_result_value in zip(
                         row, process_result_value_function_list
                     )
@@ -242,12 +302,7 @@ class Result(Sequence[Record], Iterator[Record], GeneratedFields):
             ]
         else:
             self._rows = [
-                [
-                    None
-                    if tuple(column.keys())[0] == 'isNull'
-                    else tuple(column.values())[0]
-                    for column in row
-                ]
+                [_get_value_from_row(column) for column in row]
                 for row in response.get('records', [])  # type: ignore
             ]
         self._column_metadata: List[Dict[str, Any]] = response.get('columnMetadata', [])

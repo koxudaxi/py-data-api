@@ -156,8 +156,7 @@ def convert_value(value: Any) -> Dict[str, Any]:
             return {IS_NULL: True}
         return convert_array_value(value)
     # TODO: support structValue
-    else:
-        raise Exception(f'unsupported type {type(value)}: {value} ')
+    return {STRING_VALUE: str(value)}
 
 
 def create_sql_parameters(

@@ -1,3 +1,4 @@
+import datetime
 from typing import Any, Dict
 
 import pytest
@@ -63,12 +64,16 @@ def test_convert_value(input_value: Any, expected: Dict[str, Any]) -> None:
     assert convert_value(input_value) == expected
 
 
-def test_convert_value_fail() -> None:
+def test_convert_value_other_types() -> None:
     class Dummy:
-        pass
+        def __str__(self):
+            return 'Dummy'
 
-    with pytest.raises(Exception):
-        convert_value(Dummy())
+    assert convert_value(Dummy()) == {'stringValue': 'Dummy'}
+
+    assert convert_value(datetime.datetime(2020, 1, 1)) == {
+        'stringValue': '2020-01-01 00:00:00'
+    }
 
 
 @pytest.mark.parametrize(

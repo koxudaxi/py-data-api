@@ -1,3 +1,5 @@
+import datetime
+from decimal import Decimal
 from typing import Any, Dict, Iterator, List, Optional, Tuple, Type
 
 import boto3
@@ -9,12 +11,68 @@ apilevel: str = '2.0'
 threadsafety: int = 2
 paramstyle: str = 'named'
 
+# https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/data-api.html
+"""
+
+JDBC Data Type                                        | Data API Data Type
+INTEGER, TINYINT, SMALLINT, BIGINT                    | LONG
+FLOAT, REAL, DOUBLE                                   | DOUBLE
+DECIMAL                                               | STRING
+BOOLEAN, BIT                                          | BOOLEAN
+BLOB, BINARY, LONGVARBINARY, VARBINARY                | BLOB
+CLOB                                                  | STRING
+Other types (including types related to date and time)| STRING
+"""
+
+# https://docs.oracle.com/javase/8/docs/api/constant-values.html#java.sql.Types
+JDBC_TYPES: Dict[int, Type] = {
+    # 2003: list # ARRAY  2003
+    -5: int,  # BIGINT -5
+    # BINARY  -2
+    -7: bytes,  # BIT  -7
+    2004: bytes,  # BLOB  2004
+    16: bool,  # BOOLEAN  16
+    1: str,  # CHAR  1
+    2005: bytes,  # CLOB  2005
+    # DATALINK  70
+    91: datetime.date,  # DATE	91
+    3: Decimal,  # DECIMAL	3
+    # DISTINCT	2001
+    8: float,  # DOUBLE	8
+    6: float,  # FLOAT	6
+    4: int,  # INTEGER	4
+    # JAVA_OBJECT	2000
+    # LONGNVARCHAR	-16
+    # LONGVARBINARY	-4
+    # LONGVARCHAR	-1
+    # NCHAR	-15
+    # NCLOB	2011
+    # NULL	0
+    # NUMERIC	2
+    # NVARCHAR	-9
+    # OTHER	1111
+    # REAL	7
+    # REF	2006
+    # REF_CURSOR	2012
+    # ROWID	-8
+    5: int,  # SMALLINT	5
+    # SQLXML	2009
+    # STRUCT	2002
+    92: datetime.time,  # TIME	92
+    # TIME_WITH_TIMEZONE	2013
+    93: datetime.datetime,  # TIMESTAMP	93
+    # TIMESTAMP_WITH_TIMEZONE	2014
+    -6: int,  # TINYINT	-6
+    -3: bytes,  # VARBINARY	-3
+    12: str,  # VARCHAR	12
+}
+
 
 def get_description(column_metadata: List[Dict[str, Any]]) -> Tuple:
     return tuple(
         (
             meta['label'],  # name
-            0,  # type_code,
+            JDBC_TYPES.get(meta['type']),  # type_code,
             0,  # display_size,
             0,  # internal_size,
             meta['precision'],  # precision,

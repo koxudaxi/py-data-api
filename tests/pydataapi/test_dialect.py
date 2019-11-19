@@ -160,7 +160,13 @@ def test_mysql(mocked_client) -> None:
         {'records': [[{'stringValue': 'test unicode returns'}]]},
         {
             'numberOfRecordsUpdated': 0,
-            'records': [[{'longValue': 1}, {'stringValue': 'cat'}]],
+            'records': [
+                [
+                    {'longValue': 1},
+                    {'stringValue': 'cat'},
+                    {"stringValue": "2019-11-12 10:20:30"},
+                ]
+            ],
             "columnMetadata": [
                 {
                     "arrayBaseColumnType": 0,
@@ -194,6 +200,21 @@ def test_mysql(mocked_client) -> None:
                     "type": 12,
                     "typeName": "VARCHAR",
                 },
+                {
+                    "arrayBaseColumnType": 0,
+                    "isAutoIncrement": False,
+                    "isCaseSensitive": True,
+                    "isCurrency": False,
+                    "isSigned": True,
+                    "label": "created",
+                    "name": "created",
+                    "nullable": 1,
+                    "precision": 19,
+                    "scale": 0,
+                    "tableName": "pets",
+                    "type": 93,
+                    "typeName": "DATETIME",
+                },
             ],
         },
     ]
@@ -209,7 +230,7 @@ def test_mysql(mocked_client) -> None:
     )
 
     result: ResultProxy = engine.execute("select * from pets")
-    assert result.fetchall() == [(1, 'cat')]
+    assert result.fetchall() == [(1, 'cat', '2019-11-12 10:20:30')]
 
 
 def test_postgresql(mocked_client) -> None:
@@ -312,7 +333,13 @@ def test_postgresql(mocked_client) -> None:
         },
         {
             'numberOfRecordsUpdated': 0,
-            'records': [[{'longValue': 1}, {'stringValue': 'cat'}]],
+            'records': [
+                [
+                    {'longValue': 1},
+                    {'stringValue': 'cat'},
+                    {"stringValue": "2019-11-12 10:20:30"},
+                ]
+            ],
             "columnMetadata": [
                 {
                     "arrayBaseColumnType": 0,
@@ -346,6 +373,21 @@ def test_postgresql(mocked_client) -> None:
                     "type": 12,
                     "typeName": "VARCHAR",
                 },
+                {
+                    "arrayBaseColumnType": 0,
+                    "isAutoIncrement": False,
+                    "isCaseSensitive": True,
+                    "isCurrency": False,
+                    "isSigned": True,
+                    "label": "created",
+                    "name": "created",
+                    "nullable": 1,
+                    "precision": 19,
+                    "scale": 0,
+                    "tableName": "pets",
+                    "type": 93,
+                    "typeName": "DATETIME",
+                },
             ],
         },
     ]
@@ -360,4 +402,4 @@ def test_postgresql(mocked_client) -> None:
     )
 
     result: ResultProxy = engine.execute("select * from pets")
-    assert result.fetchall() == [(1, 'cat')]
+    assert result.fetchall() == [(1, 'cat', '2019-11-12 10:20:30')]

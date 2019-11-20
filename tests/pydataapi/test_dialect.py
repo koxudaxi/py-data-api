@@ -13,6 +13,44 @@ def test_mysql(mocked_client) -> None:
     mocked_client.begin_transaction.return_value = {'transactionId': 'abc'}
     mocked_client.execute_statement.side_effect = [
         {
+            "columnMetadata": [
+                {
+                    "arrayBaseColumnType": 0,
+                    "isAutoIncrement": False,
+                    "isCaseSensitive": False,
+                    "isCurrency": False,
+                    "isSigned": True,
+                    "label": "Variable_name",
+                    "name": "VARIABLE_NAME",
+                    "nullable": 0,
+                    "precision": 256,
+                    "scale": 0,
+                    "tableName": "VARIABLES",
+                    "type": 12,
+                    "typeName": "VARCHAR",
+                },
+                {
+                    "arrayBaseColumnType": 0,
+                    "isAutoIncrement": False,
+                    "isCaseSensitive": False,
+                    "isCurrency": False,
+                    "isSigned": True,
+                    "label": "Value",
+                    "name": "VARIABLE_VALUE",
+                    "nullable": 1,
+                    "precision": 4096,
+                    "scale": 0,
+                    "tableName": "VARIABLES",
+                    "type": 12,
+                    "typeName": "VARCHAR",
+                },
+            ],
+            "numberOfRecordsUpdated": 0,
+            "records": [
+                [{"stringValue": "character_set_client"}, {"stringValue": "utf8mb4"}]
+            ],
+        },
+        {
             'columnMetadata': [
                 {
                     'arrayBaseColumnType': 0,

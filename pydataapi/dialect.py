@@ -2,21 +2,8 @@ from abc import ABC
 from typing import Any, Type
 
 from pydataapi.dbapi import Connection
-from sqlalchemy.dialects.mysql.base import (
-    MySQLCompiler,
-    MySQLDDLCompiler,
-    MySQLDialect,
-    MySQLIdentifierPreparer,
-    MySQLTypeCompiler,
-)
-from sqlalchemy.dialects.postgresql.base import (
-    PGCompiler,
-    PGDDLCompiler,
-    PGDialect,
-    PGIdentifierPreparer,
-    PGInspector,
-    PGTypeCompiler,
-)
+from sqlalchemy.dialects.mysql.base import MySQLDialect
+from sqlalchemy.dialects.postgresql.base import PGDialect
 from sqlalchemy.engine.default import DefaultDialect
 
 
@@ -160,11 +147,14 @@ class DataAPIDialect(DefaultDialect, ABC):
 
 
 class MySQLDataAPIDialect(MySQLDialect, DataAPIDialect):
+    # https://github.com/sqlalchemy/sqlalchemy/blob/master/lib/sqlalchemy/dialects/mysql/mysqldb.py
     def _extract_error_code(self, exception: Exception) -> Any:  # pragma: no cover
-        pass
+        return exception.args[0]
 
     def _detect_charset(self, connection: Any) -> Any:  # pragma: no cover
-        pass
+        return connection.execute(
+            "show variables like 'character_set_client'"
+        ).fetchone()[1]
 
     name = "mysql"
     default_paramstyle = "named"

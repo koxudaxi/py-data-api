@@ -152,7 +152,9 @@ class MySQLDataAPIDialect(MySQLDialect, DataAPIDialect):
         return exception.args[0]
 
     def _detect_charset(self, connection: Any) -> Any:  # pragma: no cover
-        return connection.execute("show variables like 'character_set_client'").fetchone()[1]
+        return connection.execute(
+            "show variables like 'character_set_client'"
+        ).fetchone()[1]
 
     name = "mysql"
     default_paramstyle = "named"

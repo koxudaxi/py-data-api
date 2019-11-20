@@ -27,7 +27,7 @@ def test_mysql(mocked_client) -> None:
                     "scale": 0,
                     "tableName": "VARIABLES",
                     "type": 12,
-                    "typeName": "VARCHAR"
+                    "typeName": "VARCHAR",
                 },
                 {
                     "arrayBaseColumnType": 0,
@@ -42,20 +42,13 @@ def test_mysql(mocked_client) -> None:
                     "scale": 0,
                     "tableName": "VARIABLES",
                     "type": 12,
-                    "typeName": "VARCHAR"
-                }
+                    "typeName": "VARCHAR",
+                },
             ],
             "numberOfRecordsUpdated": 0,
             "records": [
-                [
-                    {
-                        "stringValue": "character_set_client"
-                    },
-                    {
-                        "stringValue": "utf8mb4"
-                    }
-                ]
-            ]
+                [{"stringValue": "character_set_client"}, {"stringValue": "utf8mb4"}]
+            ],
         },
         {
             'columnMetadata': [

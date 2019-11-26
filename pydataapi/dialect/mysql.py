@@ -24,16 +24,16 @@ class DataAPIDateTime(DataAPIDatetimeBase, DATETIME):
 
 
 class MySQLDataAPIDialect(MySQLDialect, DataAPIDialect):
-    def get_primary_keys(self, connection, table_name, schema=None, **kw):
+    def get_primary_keys(self, connection, table_name, schema=None, **kw):  # type: ignore
         pass
 
-    def get_temp_table_names(self, connection, schema=None, **kw):
+    def get_temp_table_names(self, connection, schema=None, **kw):  # type: ignore
         pass
 
-    def get_temp_view_names(self, connection, schema=None, **kw):
+    def get_temp_view_names(self, connection, schema=None, **kw):  # type: ignore
         pass
 
-    def has_sequence(self, connection, sequence_name, schema=None):
+    def has_sequence(self, connection, sequence_name, schema=None):  # type: ignore
         pass
 
     # https://github.com/sqlalchemy/sqlalchemy/blob/master/lib/sqlalchemy/dialects/mysql/mysqldb.py

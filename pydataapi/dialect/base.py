@@ -1,7 +1,7 @@
 import datetime
 import re
 from abc import ABC
-from typing import Any, Callable, List, Pattern, Type, TypeVar
+from typing import Any, Callable, List, Pattern, Type, TypeVar, Union
 
 from pydataapi.dbapi import Connection
 from sqlalchemy import cast
@@ -38,16 +38,8 @@ class DataAPIDialect(DefaultDialect, ABC):
         return Connection
 
 
-class DatetimeProtocol:
-    def strftime(self, datetime_format: str) -> str:
-        pass
+DatetimeProtocol = Union[datetime.date, datetime.datetime, datetime.time]
 
-    @classmethod
-    def strptime(cls, datetime_format: str, value: str) -> str:
-        pass
-
-
-T_DATETIME = TypeVar('T_DATETIME', bound=DatetimeProtocol)
 
 DATETIME_PATTERN: Pattern = re.compile(
     r'^\d{4}-[0-1]\d-[0-3]\d [0-2]\d:[0-6]\d:[0-6]\d$'
@@ -60,10 +52,10 @@ DATETIME_MICROSECOND_FORMAT: str = '%Y-%m-%d %H:%M:%S.%f'
 
 
 class DataAPIDatetimeBase:
-    python_type: Type[T_DATETIME]
+    python_type: Type[DatetimeProtocol]
     db_type: Type[TypeEngine]
 
-    def bind_expression(self, value: Any):
+    def bind_expression(self, value: Any) -> Any:
         return cast(value, self.db_type)
 
     def bind_processor(self, dialect: DataAPIDialect) -> Callable:
@@ -78,10 +70,12 @@ class DataAPIDatetimeBase:
         def process_result_value(value: Any) -> Any:
             if isinstance(value, str):  # TODO Support timezone
                 if re.search(DATETIME_PATTERN, value):
-                    return self.python_type.strptime(value, DATETIME_FORMAT)
+                    return self.python_type.fromisoformat(value)
                 elif re.search(DATETIME_MICROSECOND_PATTERN, value):
-                    return self.python_type.strptime(value, DATETIME_MICROSECOND_FORMAT)
-            elif isinstance(value, (int, float)):
+                    return self.python_type.fromisoformat(f'{value:<026}')
+            elif isinstance(value, (int, float)) and issubclass(
+                self.python_type, datetime.datetime
+            ):
                 return self.python_type.fromtimestamp(value)
             return value  # pragma: no cover
 
@@ -89,5 +83,5 @@ class DataAPIDatetimeBase:
 
 
 class DataAPIDatetime(DataAPIDatetimeBase, sqltypes.DATE):
-    python_type: Type[T_DATETIME] = datetime.datetime
+    python_type: Type[DatetimeProtocol] = datetime.datetime
     db_type: Type[TypeEngine] = sqltypes.DATE

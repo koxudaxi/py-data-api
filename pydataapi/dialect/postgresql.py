@@ -21,13 +21,13 @@ class DataAPIDate(DataAPIDatetimeBase, DATE):
 
 
 class PostgreSQLDataAPIDialect(PGDialect, DataAPIDialect):
-    def get_primary_keys(self, connection, table_name, schema=None, **kw):
+    def get_primary_keys(self, connection, table_name, schema=None, **kw):  # type: ignore
         pass
 
-    def get_temp_table_names(self, connection, schema=None, **kw):
+    def get_temp_table_names(self, connection, schema=None, **kw):  # type: ignore
         pass
 
-    def get_temp_view_names(self, connection, schema=None, **kw):
+    def get_temp_view_names(self, connection, schema=None, **kw):  # type: ignore
         pass
 
     @classmethod

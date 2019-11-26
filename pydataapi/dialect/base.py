@@ -1,7 +1,7 @@
 import datetime
 import re
 from abc import ABC
-from typing import Any, Callable, List, Pattern, Type, TypeVar, Union
+from typing import Any, Callable, List, Optional, Pattern, Type, TypeVar, Union
 
 from pydataapi.dbapi import Connection
 from sqlalchemy import cast
@@ -40,6 +40,7 @@ class DataAPIDialect(DefaultDialect, ABC):
 
 DatetimeProtocol = Union[datetime.date, datetime.datetime, datetime.time]
 
+DATE_PATTERN: Pattern = re.compile(r'^\d{4}-[0-1]\d-[0-3]\d$')
 
 DATETIME_PATTERN: Pattern = re.compile(
     r'^\d{4}-[0-1]\d-[0-3]\d [0-2]\d:[0-6]\d:[0-6]\d$'
@@ -47,8 +48,23 @@ DATETIME_PATTERN: Pattern = re.compile(
 DATETIME_MICROSECOND_PATTERN: Pattern = re.compile(
     r'^\d{4}-[0-1]\d-[0-3]\d [0-2]\d:[0-6]\d:[0-6]\d\.\d{1,6}$'
 )
+
+DATE_FORMAT: str = '%Y-%m-%d'
 DATETIME_FORMAT: str = '%Y-%m-%d %H:%M:%S'
 DATETIME_MICROSECOND_FORMAT: str = '%Y-%m-%d %H:%M:%S.%f'
+
+
+def _parse_datetime(value: Union[str, float, int]) -> Optional[datetime.datetime]:
+    if isinstance(value, str):  # TODO Support timezone
+        if re.search(DATETIME_PATTERN, value):
+            return datetime.datetime.strptime(value, DATETIME_FORMAT)
+        elif re.search(DATETIME_MICROSECOND_PATTERN, value):
+            return datetime.datetime.strptime(value, DATETIME_MICROSECOND_FORMAT)
+        elif re.search(DATE_PATTERN, value):
+            return datetime.datetime.strptime(value, DATE_FORMAT)
+    elif isinstance(value, (int, float)):
+        return datetime.datetime.fromtimestamp(value)
+    return None  # pragma: no cover
 
 
 class DataAPIDatetimeBase:
@@ -68,15 +84,13 @@ class DataAPIDatetimeBase:
 
     def result_processor(self, dialect: DataAPIDialect, coltype: List) -> Any:
         def process_result_value(value: Any) -> Any:
-            if isinstance(value, str):  # TODO Support timezone
-                if re.search(DATETIME_PATTERN, value):
-                    return self.python_type.fromisoformat(value)
-                elif re.search(DATETIME_MICROSECOND_PATTERN, value):
-                    return self.python_type.fromisoformat(f'{value:<026}')
-            elif isinstance(value, (int, float)) and issubclass(
-                self.python_type, datetime.datetime
-            ):
-                return self.python_type.fromtimestamp(value)
+            parsed_datetime = _parse_datetime(value)
+            if parsed_datetime:
+                if self.python_type == datetime.time:  # pragma: no cover
+                    return parsed_datetime.time()
+                elif self.python_type == datetime.date:
+                    return parsed_datetime.date()
+                return parsed_datetime
             return value  # pragma: no cover
 
         return process_result_value

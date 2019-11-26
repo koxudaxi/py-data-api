@@ -335,12 +335,13 @@ def test_mysql(mocked_client) -> None:
 
 
 def test_postgresql(mocked_client) -> None:
-    from sqlalchemy.dialects.postgresql import TIMESTAMP
+    from sqlalchemy.dialects.postgresql import TIMESTAMP, DATE
 
     class Pets(declarative_base()):
         __tablename__ = 'pets'
         id = Column(Integer, primary_key=True, autoincrement=True)
         name = Column(String(255, collation='utf8_unicode_ci'), default=None)
+        birthday = Column(DATE)
         first_time = Column(TIMESTAMP)
         updated = Column(TIMESTAMP)
         created = Column(TIMESTAMP)
@@ -446,6 +447,7 @@ def test_postgresql(mocked_client) -> None:
                 [
                     {'longValue': 1},
                     {'stringValue': 'cat'},
+                    {"stringValue": "2019-11-11"},
                     {"stringValue": "2019-11-12 10:20:20.123456"},
                     {"stringValue": 1574706700.170858},
                     {"stringValue": "2019-11-12 10:20:30"},
@@ -483,6 +485,21 @@ def test_postgresql(mocked_client) -> None:
                     "tableName": "users",
                     "type": 12,
                     "typeName": "VARCHAR",
+                },
+                {
+                    "arrayBaseColumnType": 0,
+                    "isAutoIncrement": False,
+                    "isCaseSensitive": True,
+                    "isCurrency": False,
+                    "isSigned": True,
+                    "label": "first_time",
+                    "name": "first_time",
+                    "nullable": 1,
+                    "precision": 19,
+                    "scale": 0,
+                    "tableName": "pets",
+                    "type": 91,
+                    "typeName": "DATETIME",
                 },
                 {
                     "arrayBaseColumnType": 0,
@@ -550,6 +567,7 @@ def test_postgresql(mocked_client) -> None:
     assert len(result) == 1
     assert result[0].id == 1
     assert result[0].name == 'cat'
+    assert result[0].birthday == datetime.date(2019, 11, 11)
     assert result[0].first_time == datetime.datetime(2019, 11, 12, 10, 20, 20, 123456)
     # assert result[0].updated == datetime.datetime(2019, 11, 26, 3, 31, 40, 170858)
     assert result[0].created == datetime.datetime(2019, 11, 12, 10, 20, 30)

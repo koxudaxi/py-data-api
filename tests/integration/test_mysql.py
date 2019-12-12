@@ -8,7 +8,7 @@ from pydataapi.pydataapi import Record
 from sqlalchemy import Column, Integer, String, create_engine
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import Query
+from sqlalchemy.orm import Query, sessionmaker
 from sqlalchemy.sql import Insert
 
 pytest_plugins = ["docker_compose"]
@@ -200,3 +200,25 @@ def test_rollback_with_custom_exception(db_connection):
         pass
     result = list(get_connection().execute('select * from pets'))
     assert result == [(2, 'dog')]
+
+
+def test_dialect() -> None:
+    rds_data_client = boto3.client(
+        'rds-data',
+        endpoint_url='http://127.0.0.1:8080',
+        aws_access_key_id='aaa',
+        aws_secret_access_key='bbb',
+    )
+    engine = create_engine(
+        'mysql+pydataapi://',
+        echo=True,
+        connect_args={
+            'resource_arn': 'arn:aws:rds:us-east-1:123456789012:cluster:dummy',
+            'secret_arn': 'arn:aws:secretsmanager:us-east-1:123456789012:secret:dummy',
+            'database': 'test',
+            'client': rds_data_client,
+        },
+    )
+
+    assert engine.has_table('foo') is False
+    assert engine.has_table('pets') is True

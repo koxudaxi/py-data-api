@@ -5,7 +5,7 @@ from sqlalchemy.dialects.postgresql.base import DATE, TIME, TIMESTAMP, PGDialect
 from sqlalchemy.sql.type_api import TypeEngine
 
 from ..dbapi import Connection
-from .base import DataAPIDatetimeBase, DataAPIDialect
+from .base import DataAPIDatetimeBase, DataAPIDialect, DataAPIDialectMixin
 
 
 class DataAPITimestamp(DataAPIDatetimeBase, TIMESTAMP):
@@ -20,7 +20,7 @@ class DataAPIDate(DataAPIDatetimeBase, DATE):
     db_type: Type[TypeEngine] = DATE
 
 
-class PostgreSQLDataAPIDialect(PGDialect, DataAPIDialect):
+class PostgreSQLDataAPIDialect(DataAPIDialectMixin, PGDialect, DataAPIDialect):
     def get_primary_keys(self, connection, table_name, schema=None, **kw):  # type: ignore
         pass
 

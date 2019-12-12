@@ -4,7 +4,7 @@ from sqlalchemy import util
 from sqlalchemy.dialects.mysql.base import DATE, DATETIME, TIME, TIMESTAMP, MySQLDialect
 from sqlalchemy.sql.type_api import TypeEngine
 
-from .base import DataAPIDatetimeBase, DataAPIDialect
+from .base import DataAPIDatetimeBase, DataAPIDialect, DataAPIDialectMixin
 
 
 class DataAPITimestamp(DataAPIDatetimeBase, TIMESTAMP):
@@ -23,7 +23,7 @@ class DataAPIDateTime(DataAPIDatetimeBase, DATETIME):
     db_type: Type[TypeEngine] = DATETIME
 
 
-class MySQLDataAPIDialect(MySQLDialect, DataAPIDialect):
+class MySQLDataAPIDialect(DataAPIDialectMixin, MySQLDialect, DataAPIDialect):
     def get_primary_keys(self, connection, table_name, schema=None, **kw):  # type: ignore
         pass
 

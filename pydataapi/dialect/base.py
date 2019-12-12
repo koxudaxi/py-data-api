@@ -3,6 +3,7 @@ import re
 from abc import ABC
 from typing import Any, Callable, List, Optional, Pattern, Type, TypeVar, Union
 
+from botocore.exceptions import ClientError
 from pydataapi.dbapi import Connection
 from sqlalchemy import cast
 from sqlalchemy.engine.default import DefaultDialect
@@ -99,3 +100,15 @@ class DataAPIDatetimeBase:
 class DataAPIDatetime(DataAPIDatetimeBase, sqltypes.DATE):
     python_type: Type[DatetimeProtocol] = datetime.datetime
     db_type: Type[TypeEngine] = sqltypes.DATE
+
+
+class DataAPIDialectMixin:
+    def has_table(self, connection, table_name, schema=None) -> bool:  # type: ignore
+        try:
+            return super().has_table(connection, table_name, schema)  # type: ignore
+        except ClientError as e:
+            if re.match(
+                r"Table '.+' doesn't exist", e.response['Error']['Message']
+            ):  # pragma: no cover
+                return False
+            raise  # pragma: no cover

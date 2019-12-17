@@ -1,6 +1,6 @@
 # py-data-api - Data API Client for Python
 
-[![Build Status](https://travis-ci.org/koxudaxi/py-data-api.svg?branch=master)](https://travis-ci.org/koxudaxi/py-data-api)
+[![Test Status](https://github.com/koxudaxi/py-data-api/workflows/Test/badge.svg)](https://github.com/koxudaxi/py-data-api/actions)
 [![PyPI version](https://badge.fury.io/py/pydataapi.svg)](https://badge.fury.io/py/pydataapi)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pydataapi)](https://pypi.python.org/pypi/pydataapi)
 [![codecov](https://codecov.io/gh/koxudaxi/py-data-api/branch/master/graph/badge.svg)](https://codecov.io/gh/koxudaxi/py-data-api)

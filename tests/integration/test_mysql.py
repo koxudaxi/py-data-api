@@ -27,7 +27,7 @@ secret_arn: str = 'arn:aws:secretsmanager:us-east-1:123456789012:secret:dummy'
 
 def get_connection() -> Connection:
     return create_engine(
-        'mysql+pymysql://root:example@127.0.0.1:3306/test?charset=utf8mb4'
+        'mysql+pymysql://root:example@127.0.0.1:13306/test?charset=utf8mb4'
     ).connect()
 
 

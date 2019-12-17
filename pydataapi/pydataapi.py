@@ -398,7 +398,7 @@ class Options(BaseModel):
         return generate_sql(v)
 
     def build(self) -> Dict[str, Any]:
-        return self.dict(skip_defaults=True, by_alias=True)
+        return self.dict(exclude_unset=True, by_alias=True)
 
 
 def find_arn_by_resource_name(

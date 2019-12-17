@@ -1,0 +1,1 @@
+pytest --cov=pydataapi --ignore-glob=tests/integration/**  --cov-report term-missing  tests

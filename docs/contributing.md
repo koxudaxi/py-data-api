@@ -18,7 +18,8 @@ $ python3 -m pip install ".[all]"
 $ git checkout -b new-branch
 
 ## 5. Run unittest (you should pass all test and coverage should be 100%)
-$ ./scripts/test.sh
+$ ./scripts/unittest.sh
+$ ./scripts/integration_test.sh
 
 ## 6. Format code
 $ ./scripts/format.sh

@@ -1,11 +1,12 @@
 import time
+from datetime import datetime
 from typing import List
 
 import boto3
 import pytest
 from pydataapi import DataAPI, Result, transaction
 from pydataapi.pydataapi import Record
-from sqlalchemy import Column, Integer, String, create_engine
+from sqlalchemy import Column, DateTime, Integer, String, create_engine
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Query, sessionmaker
@@ -18,6 +19,7 @@ class Pets(declarative_base()):
     __tablename__ = 'pets'
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(255, collation='utf8_unicode_ci'), default=None)
+    seen_at = Column(DateTime, default=None)
 
 
 database: str = 'test'
@@ -56,7 +58,7 @@ def db_connection(module_scoped_container_getter) -> Connection:
 def create_table(db_connection) -> None:
     db_connection.execute('drop table if exists pets;')
     db_connection.execute(
-        'create table pets (id int auto_increment not null primary key, name varchar(10));'
+        'create table pets (id int auto_increment not null primary key, name varchar(10), seen_at TIMESTAMP null);'
     )
 
 
@@ -117,32 +119,33 @@ def test_with_statement(rds_data_client, db_connection):
         query = Query(Pets).filter(Pets.id == 1)
         result = data_api.execute(query)
 
-        assert list(result) == [Record([1, 'dog'], [])]
+        assert list(result) == [Record([1, 'dog', None], [])]
 
         result = data_api.execute('select * from pets')
-        assert result.one().dict() == {'id': 1, 'name': 'dog'}
+        assert result.one().dict() == {'id': 1, 'name': 'dog', 'seen_at': None}
 
-        insert: Insert = Insert(Pets)
-        data_api.batch_execute(
-            insert,
-            [
-                {'id': 2, 'name': 'cat'},
-                {'id': 3, 'name': 'snake'},
-                {'id': 4, 'name': 'rabbit'},
-            ],
-        )
-
-        result = data_api.execute('select * from pets')
-        expected = [
-            Record([1, 'dog'], ['id', 'name']),
-            Record([2, 'cat'], ['id', 'name']),
-            Record([3, 'snake'], ['id', 'name']),
-            Record([4, 'rabbit'], ['id', 'name']),
-        ]
-        assert list(result) == expected
-
-        for row, expected_row in zip(result, expected):
-            assert row == expected_row
+        # This is deprecated. SQL Alchemy object will be no longer supported
+        # insert: Insert = Insert(Pets)
+        # data_api.batch_execute(
+        #     insert,
+        #     [
+        #         {'id': 2, 'name': 'cat', 'seen_at': None},
+        #         {'id': 3, 'name': 'snake', 'seen_at': None},
+        #         {'id': 4, 'name': 'rabbit', 'seen_at': None},
+        #     ],
+        # )
+        #
+        # result = data_api.execute('select * from pets')
+        # expected = [
+        #     Record([1, 'dog', None], ['id', 'name', 'seen_at']),
+        #     Record([2, 'cat', None], ['id', 'name', 'seen_at']),
+        #     Record([3, 'snake', None], ['id', 'name', 'seen_at']),
+        #     Record([4, 'rabbit', None], ['id', 'name', 'seen_at']),
+        # ]
+        # assert list(result) == expected
+        #
+        # for row, expected_row in zip(result, expected):
+        #     assert row == expected_row
 
 
 def test_rollback(rds_data_client, db_connection):
@@ -199,10 +202,10 @@ def test_rollback_with_custom_exception(db_connection):
     except:
         pass
     result = list(get_connection().execute('select * from pets'))
-    assert result == [(2, 'dog')]
+    assert result == [(2, 'dog', None)]
 
 
-def test_dialect() -> None:
+def test_dialect(create_table) -> None:
     rds_data_client = boto3.client(
         'rds-data',
         endpoint_url='http://127.0.0.1:8080',
@@ -222,3 +225,19 @@ def test_dialect() -> None:
 
     assert engine.has_table('foo') is False
     assert engine.has_table('pets') is True
+
+    Session = sessionmaker()
+    Session.configure(bind=engine)
+    session = Session()
+
+    dog = Pets(name="dog", seen_at=datetime(2020, 1, 2, 3, 4, 5, 6789))
+
+    session.add(dog)
+    session.commit()
+
+    result = list(engine.execute('select * from pets'))
+    assert result[0] == (
+        1,
+        'dog',
+        '2020-01-02 03:04:05',
+    )  # TODO Update local-data-api to support typeHint

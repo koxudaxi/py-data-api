@@ -1,4 +1,6 @@
 from contextlib import AbstractContextManager
+from datetime import date, datetime, time
+from decimal import Decimal
 from functools import wraps
 from typing import (
     Any,
@@ -46,6 +48,11 @@ STRING_VALUES: str = 'stringValues'
 LONG_VALUES: str = 'longValues'
 DOUBLE_VALUES: str = 'doubleValues'
 BLOB_VALUES: str = 'blobValues'
+
+DECIMAL_TYPE_HINT: str = 'DECIMAL'
+TIMESTAMP_TYPE_HINT: str = 'TIMESTAMP'
+TIME_TYPE_HINT: str = 'TIME'
+DATE_TYPE_HINT: str = 'DATE'
 
 
 def generate_sql(query: Union[Query, Insert, Update, Delete, Select]) -> str:
@@ -138,33 +145,51 @@ def convert_array_value(value: Union[List, Tuple]) -> Dict[str, Any]:
     raise Exception(f'unsupported array type {type(value[0])}]: {value} ')
 
 
-def convert_value(value: Any) -> Dict[str, Any]:
+def create_sql_parameter(key: str, value: Any) -> Dict[str, Any]:
+    converted_value: Dict[str, Any]
+    type_hint: Optional[str] = None
+
     if isinstance(value, bool):
-        return {BOOLEAN_VALUE: value}
+        converted_value = {BOOLEAN_VALUE: value}
     elif isinstance(value, str):
-        return {STRING_VALUE: value}
+        converted_value = {STRING_VALUE: value}
     elif isinstance(value, int):
-        return {LONG_VALUE: value}
+        converted_value = {LONG_VALUE: value}
     elif isinstance(value, float):
-        return {DOUBLE_VALUE: value}
+        converted_value = {DOUBLE_VALUE: value}
     elif isinstance(value, bytes):
-        return {BLOB_VALUE: value}
+        converted_value = {BLOB_VALUE: value}
     elif value is None:
-        return {IS_NULL: True}
+        converted_value = {IS_NULL: True}
     elif isinstance(value, (list, tuple)):
-        if not value:
-            return {IS_NULL: True}
-        return convert_array_value(value)
-    # TODO: support structValue
-    return {STRING_VALUE: str(value)}
+        if value:
+            converted_value = convert_array_value(value)
+        else:
+            converted_value = {IS_NULL: True}
+    elif isinstance(value, Decimal):
+        converted_value = {STRING_VALUE: str(value)}
+        type_hint = DECIMAL_TYPE_HINT
+    elif isinstance(value, datetime):
+        converted_value = {STRING_VALUE: value.strftime('%Y-%m-%d %H:%M:%S.%f')[:23]}
+        type_hint = TIMESTAMP_TYPE_HINT
+    elif isinstance(value, time):
+        converted_value = {STRING_VALUE: value.strftime('%H:%M:%S.%f')[:12]}
+        type_hint = TIME_TYPE_HINT
+    elif isinstance(value, date):
+        converted_value = {STRING_VALUE: value.strftime('%Y-%m-%d')}
+        type_hint = DATE_TYPE_HINT
+    else:
+        # TODO: support structValue
+        converted_value = {STRING_VALUE: str(value)}
+    if type_hint:
+        return {'name': key, 'value': converted_value, 'typeHint': type_hint}
+    return {'name': key, 'value': converted_value}
 
 
 def create_sql_parameters(
     parameter: Dict[str, Any]
 ) -> List[Dict[str, Union[str, Dict]]]:
-    return [
-        {'name': key, 'value': convert_value(value)} for key, value in parameter.items()
-    ]
+    return [create_sql_parameter(key, value) for key, value in parameter.items()]
 
 
 def _get_value_from_row(row: Dict[str, Any]) -> Any:

@@ -239,5 +239,5 @@ def test_dialect(create_table) -> None:
     assert result[0] == (
         1,
         'dog',
-        '2020-01-02 03:04:05.678000',
+        '2020-01-02 03:04:05.678912',
     )

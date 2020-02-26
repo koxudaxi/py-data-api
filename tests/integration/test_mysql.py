@@ -6,7 +6,7 @@ import boto3
 import pytest
 from pydataapi import DataAPI, Result, transaction
 from pydataapi.pydataapi import Record
-from sqlalchemy import Column, Integer, String, create_engine, DateTime
+from sqlalchemy import Column, DateTime, Integer, String, create_engine
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Query, sessionmaker
@@ -106,10 +106,10 @@ def test_decorator(rds_data_client, db_connection):
 
 def test_with_statement(rds_data_client, db_connection):
     with DataAPI(
-            database=database,
-            resource_arn=resource_arn,
-            secret_arn=secret_arn,
-            client=rds_data_client,
+        database=database,
+        resource_arn=resource_arn,
+        secret_arn=secret_arn,
+        client=rds_data_client,
     ) as data_api:
         insert: Insert = Insert(Pets, {'name': 'dog'})
 
@@ -176,11 +176,11 @@ def test_rollback_with_custom_exception(db_connection):
 
     try:
         with DataAPI(
-                resource_arn=resource_arn,
-                secret_arn=secret_arn,
-                rollback_exception=OriginalError,
-                database=database,
-                client=rds_data_client,
+            resource_arn=resource_arn,
+            secret_arn=secret_arn,
+            rollback_exception=OriginalError,
+            database=database,
+            client=rds_data_client,
         ) as data_api:
             data_api.execute(Insert(Pets, {'name': 'dog'}))
             raise OriginalError  # rollback
@@ -191,11 +191,11 @@ def test_rollback_with_custom_exception(db_connection):
 
     try:
         with DataAPI(
-                resource_arn=resource_arn,
-                secret_arn=secret_arn,
-                rollback_exception=OriginalError,
-                database=database,
-                client=rds_data_client,
+            resource_arn=resource_arn,
+            secret_arn=secret_arn,
+            rollback_exception=OriginalError,
+            database=database,
+            client=rds_data_client,
         ) as data_api:
             data_api.execute(Insert(Pets, {'name': 'dog'}))
             raise OtherError
@@ -230,13 +230,14 @@ def test_dialect(create_table) -> None:
     Session.configure(bind=engine)
     session = Session()
 
-    dog = Pets(
-        name="dog",
-        seen_at=datetime(2020, 1, 2, 3, 4, 5, 6789)
-    )
+    dog = Pets(name="dog", seen_at=datetime(2020, 1, 2, 3, 4, 5, 6789))
 
     session.add(dog)
     session.commit()
 
     result = list(engine.execute('select * from pets'))
-    assert result[0] == (1, 'dog', '2020-01-02 03:04:05')  # TODO Update local-data-api to support typeHint
+    assert result[0] == (
+        1,
+        'dog',
+        '2020-01-02 03:04:05',
+    )  # TODO Update local-data-api to support typeHint

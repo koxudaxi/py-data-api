@@ -75,25 +75,27 @@ def test_convert_value_other_types() -> None:
     assert create_sql_parameter('decimal', Decimal(123456789)) == {
         'name': 'decimal',
         'typeHint': 'DECIMAL',
-        'value': {'stringValue': '123456789'}
+        'value': {'stringValue': '123456789'},
     }
 
-    assert create_sql_parameter('datetime', datetime.datetime(2020, 1, 2, 3, 4, 5, 678900)) == {
+    assert create_sql_parameter(
+        'datetime', datetime.datetime(2020, 1, 2, 3, 4, 5, 678900)
+    ) == {
         'name': 'datetime',
         'typeHint': 'TIMESTAMP',
-        'value': {'stringValue': '2020-01-02 03:04:05.678'}
+        'value': {'stringValue': '2020-01-02 03:04:05.678'},
     }
 
     assert create_sql_parameter('date', datetime.date(2020, 1, 2)) == {
         'name': 'date',
         'typeHint': 'DATE',
-        'value': {'stringValue': '2020-01-02'}
+        'value': {'stringValue': '2020-01-02'},
     }
 
     assert create_sql_parameter('time', datetime.time(3, 4, 5, 678900)) == {
         'name': 'time',
         'typeHint': 'TIME',
-        'value': {'stringValue': '03:04:05.678'}
+        'value': {'stringValue': '03:04:05.678'},
     }
 
 

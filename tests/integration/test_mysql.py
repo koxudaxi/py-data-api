@@ -236,8 +236,4 @@ def test_dialect(create_table) -> None:
     session.commit()
 
     result = list(engine.execute('select * from pets'))
-    assert result[0] == (
-        1,
-        'dog',
-        '2020-01-02 03:04:05.678912',
-    )
+    assert result[0] == (1, 'dog', '2020-01-02 03:04:05.678912',)

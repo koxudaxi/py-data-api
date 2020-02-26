@@ -118,7 +118,7 @@ def example_rollback_with_custom_exception():
     class OriginalError(Exception):
         pass
 
-    with DataAPI(resource_arn=resource_arn, secret_arn=secret_arn, rollback_exception=rollback_exception=OriginalError) as data_api:
+    with DataAPI(resource_arn=resource_arn, secret_arn=secret_arn, rollback_exception=OriginalError) as data_api:
         data_api.execute(Insert(Pets, {'name': 'dog'}))
         # some logic ...
 

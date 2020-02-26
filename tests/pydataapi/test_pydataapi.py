@@ -1,4 +1,5 @@
 import datetime
+from decimal import Decimal
 from typing import Any, Dict
 
 import pytest
@@ -13,7 +14,7 @@ from pydataapi.pydataapi import (
     UpdateResults,
     _get_value_from_row,
     convert_array_value,
-    convert_value,
+    create_sql_parameter,
     create_sql_parameters,
     generate_sql,
     transaction,
@@ -60,8 +61,8 @@ def mocked_client(mocker):
         ([b'bytes', b'blob'], {'arrayValue': {'blobValues': [b'bytes', b'blob']}}),
     ],
 )
-def test_convert_value(input_value: Any, expected: Dict[str, Any]) -> None:
-    assert convert_value(input_value) == expected
+def test_create_sql_parameter(input_value: Any, expected: Dict[str, Any]) -> None:
+    assert create_sql_parameter('', input_value)['value'] == expected
 
 
 def test_convert_value_other_types() -> None:
@@ -69,10 +70,30 @@ def test_convert_value_other_types() -> None:
         def __str__(self):
             return 'Dummy'
 
-    assert convert_value(Dummy()) == {'stringValue': 'Dummy'}
+    assert create_sql_parameter('', Dummy())['value'] == {'stringValue': 'Dummy'}
 
-    assert convert_value(datetime.datetime(2020, 1, 1)) == {
-        'stringValue': '2020-01-01 00:00:00'
+    assert create_sql_parameter('decimal', Decimal(123456789)) == {
+        'name': 'decimal',
+        'typeHint': 'DECIMAL',
+        'value': {'stringValue': '123456789'}
+    }
+
+    assert create_sql_parameter('datetime', datetime.datetime(2020, 1, 2, 3, 4, 5, 678900)) == {
+        'name': 'datetime',
+        'typeHint': 'TIMESTAMP',
+        'value': {'stringValue': '2020-01-02 03:04:05.678'}
+    }
+
+    assert create_sql_parameter('date', datetime.date(2020, 1, 2)) == {
+        'name': 'date',
+        'typeHint': 'DATE',
+        'value': {'stringValue': '2020-01-02'}
+    }
+
+    assert create_sql_parameter('time', datetime.time(3, 4, 5, 678900)) == {
+        'name': 'time',
+        'typeHint': 'TIME',
+        'value': {'stringValue': '03:04:05.678'}
     }
 
 

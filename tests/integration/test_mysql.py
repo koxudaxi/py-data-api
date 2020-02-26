@@ -58,7 +58,7 @@ def db_connection(module_scoped_container_getter) -> Connection:
 def create_table(db_connection) -> None:
     db_connection.execute('drop table if exists pets;')
     db_connection.execute(
-        'create table pets (id int auto_increment not null primary key, name varchar(10), seen_at TIMESTAMP null);'
+        'create table pets (id int auto_increment not null primary key, name varchar(10), seen_at TIMESTAMP(6) null);'
     )
 
 
@@ -230,14 +230,10 @@ def test_dialect(create_table) -> None:
     Session.configure(bind=engine)
     session = Session()
 
-    dog = Pets(name="dog", seen_at=datetime(2020, 1, 2, 3, 4, 5, 6789))
+    dog = Pets(name="dog", seen_at=datetime(2020, 1, 2, 3, 4, 5, 678912))
 
     session.add(dog)
     session.commit()
 
     result = list(engine.execute('select * from pets'))
-    assert result[0] == (
-        1,
-        'dog',
-        '2020-01-02 03:04:05',
-    )  # TODO Update local-data-api to support typeHint
+    assert result[0] == (1, 'dog', '2020-01-02 03:04:05.678912',)

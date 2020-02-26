@@ -170,10 +170,10 @@ def create_sql_parameter(key: str, value: Any) -> Dict[str, Any]:
         converted_value = {STRING_VALUE: str(value)}
         type_hint = DECIMAL_TYPE_HINT
     elif isinstance(value, datetime):
-        converted_value = {STRING_VALUE: value.strftime('%Y-%m-%d %H:%M:%S.%f')[:23]}
+        converted_value = {STRING_VALUE: value.strftime('%Y-%m-%d %H:%M:%S.%f')}
         type_hint = TIMESTAMP_TYPE_HINT
     elif isinstance(value, time):
-        converted_value = {STRING_VALUE: value.strftime('%H:%M:%S.%f')[:12]}
+        converted_value = {STRING_VALUE: value.strftime('%H:%M:%S.%f')}
         type_hint = TIME_TYPE_HINT
     elif isinstance(value, date):
         converted_value = {STRING_VALUE: value.strftime('%Y-%m-%d')}

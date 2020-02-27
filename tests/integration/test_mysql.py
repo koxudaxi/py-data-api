@@ -139,8 +139,12 @@ def test_with_statement(rds_data_client, db_connection):
         expected = [
             Record([1, 'dog', None], ['id', 'name', 'seen_at']),
             Record([2, 'cat', '2020-01-02 03:04:05.678912'], ['id', 'name', 'seen_at']),
-            Record([3, 'snake', '2020-01-02 03:04:05.678912'], ['id', 'name', 'seen_at']),
-            Record([4, 'rabbit', '2020-01-02 03:04:05.678912'], ['id', 'name', 'seen_at']),
+            Record(
+                [3, 'snake', '2020-01-02 03:04:05.678912'], ['id', 'name', 'seen_at']
+            ),
+            Record(
+                [4, 'rabbit', '2020-01-02 03:04:05.678912'], ['id', 'name', 'seen_at']
+            ),
         ]
         assert list(result) == expected
 

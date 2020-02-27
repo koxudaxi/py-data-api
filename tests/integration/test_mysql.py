@@ -125,27 +125,31 @@ def test_with_statement(rds_data_client, db_connection):
         assert result.one().dict() == {'id': 1, 'name': 'dog', 'seen_at': None}
 
         # This is deprecated. SQL Alchemy object will be no longer supported
-        # insert: Insert = Insert(Pets)
-        # data_api.batch_execute(
-        #     insert,
-        #     [
-        #         {'id': 2, 'name': 'cat', 'seen_at': None},
-        #         {'id': 3, 'name': 'snake', 'seen_at': None},
-        #         {'id': 4, 'name': 'rabbit', 'seen_at': None},
-        #     ],
-        # )
-        #
-        # result = data_api.execute('select * from pets')
-        # expected = [
-        #     Record([1, 'dog', None], ['id', 'name', 'seen_at']),
-        #     Record([2, 'cat', None], ['id', 'name', 'seen_at']),
-        #     Record([3, 'snake', None], ['id', 'name', 'seen_at']),
-        #     Record([4, 'rabbit', None], ['id', 'name', 'seen_at']),
-        # ]
-        # assert list(result) == expected
-        #
-        # for row, expected_row in zip(result, expected):
-        #     assert row == expected_row
+        insert: Insert = Insert(Pets)
+        data_api.batch_execute(
+            insert,
+            [
+                {'id': 2, 'seen_at': '2020-01-02 03:04:05.678912', 'name': 'cat'},
+                {'id': 3, 'name': 'snake', 'seen_at': '2020-01-02 03:04:05.678912'},
+                {'id': 4, 'name': 'rabbit', 'seen_at': '2020-01-02 03:04:05.678912'},
+            ],
+        )
+
+        result = data_api.execute('select * from pets')
+        expected = [
+            Record([1, 'dog', None], ['id', 'name', 'seen_at']),
+            Record([2, 'cat', '2020-01-02 03:04:05.678912'], ['id', 'name', 'seen_at']),
+            Record(
+                [3, 'snake', '2020-01-02 03:04:05.678912'], ['id', 'name', 'seen_at']
+            ),
+            Record(
+                [4, 'rabbit', '2020-01-02 03:04:05.678912'], ['id', 'name', 'seen_at']
+            ),
+        ]
+        assert list(result) == expected
+
+        for row, expected_row in zip(result, expected):
+            assert row == expected_row
 
 
 def test_rollback(rds_data_client, db_connection):

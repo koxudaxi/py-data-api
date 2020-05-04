@@ -468,7 +468,9 @@ class DataAPI(AbstractContextManager):
             client_kwargs['region_name'] = region_name
 
         self._transaction_id: Optional[str] = transaction_id
-        self._client: boto3.session.Session.client = client or boto3.client('rds-data', **client_kwargs)
+        self._client: boto3.session.Session.client = client or boto3.client(
+            'rds-data', **client_kwargs
+        )
         self._transaction_status: Optional[str] = None
         self.rollback_exception: Optional[Type[Exception]] = rollback_exception
 

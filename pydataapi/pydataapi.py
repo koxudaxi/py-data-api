@@ -462,8 +462,13 @@ class DataAPI(AbstractContextManager):
         self.secret_arn: str = secret_arn
         self.database: Optional[str] = database
 
+        client_kwargs = {}
+        region_name = resource_arn.split(':')[3]
+        if region_name:
+            client_kwargs['region_name'] = region_name
+
         self._transaction_id: Optional[str] = transaction_id
-        self._client: boto3.session.Session.client = client or boto3.client('rds-data')
+        self._client: boto3.session.Session.client = client or boto3.client('rds-data', **client_kwargs)
         self._transaction_status: Optional[str] = None
         self.rollback_exception: Optional[Type[Exception]] = rollback_exception
 

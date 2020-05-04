@@ -28,35 +28,35 @@ from sqlalchemy.sql import Delete, Insert, Select, Update
 
 MAX_RECORDS: int = 1000
 
-DIALECT: Dialect = mysql.dialect(paramstyle='named')
+DIALECT: Dialect = mysql.dialect(paramstyle="named")
 
 QUERY_STATEMENT_COMPILE_PARAMS = {
-    'dialect': mysql.dialect(paramstyle='named'),
-    'compile_kwargs': {"literal_binds": True},
+    "dialect": mysql.dialect(paramstyle="named"),
+    "compile_kwargs": {"literal_binds": True},
 }
 
-BOOLEAN_VALUE: str = 'booleanValue'
-STRING_VALUE: str = 'stringValue'
-LONG_VALUE: str = 'longValue'
-DOUBLE_VALUE: str = 'doubleValue'
-BLOB_VALUE: str = 'blobValue'
-IS_NULL: str = 'isNull'
-ARRAY_VALUE: str = 'arrayValue'
-ARRAY_VALUES: str = 'arrayValues'
-BOOLEAN_VALUES: str = 'booleanValues'
-STRING_VALUES: str = 'stringValues'
-LONG_VALUES: str = 'longValues'
-DOUBLE_VALUES: str = 'doubleValues'
-BLOB_VALUES: str = 'blobValues'
+BOOLEAN_VALUE: str = "booleanValue"
+STRING_VALUE: str = "stringValue"
+LONG_VALUE: str = "longValue"
+DOUBLE_VALUE: str = "doubleValue"
+BLOB_VALUE: str = "blobValue"
+IS_NULL: str = "isNull"
+ARRAY_VALUE: str = "arrayValue"
+ARRAY_VALUES: str = "arrayValues"
+BOOLEAN_VALUES: str = "booleanValues"
+STRING_VALUES: str = "stringValues"
+LONG_VALUES: str = "longValues"
+DOUBLE_VALUES: str = "doubleValues"
+BLOB_VALUES: str = "blobValues"
 
-DECIMAL_TYPE_HINT: str = 'DECIMAL'
-TIMESTAMP_TYPE_HINT: str = 'TIMESTAMP'
-TIME_TYPE_HINT: str = 'TIME'
-DATE_TYPE_HINT: str = 'DATE'
+DECIMAL_TYPE_HINT: str = "DECIMAL"
+TIMESTAMP_TYPE_HINT: str = "TIMESTAMP"
+TIME_TYPE_HINT: str = "TIME"
+DATE_TYPE_HINT: str = "DATE"
 
 
 def generate_sql(query: Union[Query, Insert, Update, Delete, Select]) -> str:
-    if hasattr(query, 'statement'):
+    if hasattr(query, "statement"):
         sql: str = query.statement.compile(**QUERY_STATEMENT_COMPILE_PARAMS)
     else:
         sql = query.compile(**QUERY_STATEMENT_COMPILE_PARAMS)
@@ -84,22 +84,22 @@ def get_process_result_value_function(
         for column in query.columns:
             if column.name == column_name:
                 process_result_value = getattr(
-                    column.type, 'process_result_value', None
+                    column.type, "process_result_value", None
                 )
                 break
     elif isinstance(query, Query):  # pragma: no cover
         for column_description in query.column_descriptions:
-            type_ = column_description['type']
+            type_ = column_description["type"]
             if type_.__tablename__ == table_name:
                 column = getattr(type_, column_name, None)
                 if column:
-                    expression = getattr(column, 'expression', None)
+                    expression = getattr(column, "expression", None)
                     if (
                         isinstance(expression, Column)
                         and expression.name == column_name
                     ):
                         process_result_value = getattr(
-                            expression.type, 'process_result_value', None
+                            expression.type, "process_result_value", None
                         )
                 break
     if process_result_value:
@@ -113,7 +113,7 @@ def create_process_result_value_function_list(
     dialect: default.DefaultDialect,
 ) -> List[Callable]:
     return [
-        get_process_result_value_function(cm['tableName'], cm['name'], query, dialect)
+        get_process_result_value_function(cm["tableName"], cm["name"], query, dialect)
         for cm in column_metadata
     ]
 
@@ -142,7 +142,7 @@ def convert_array_value(value: Union[List, Tuple]) -> Dict[str, Any]:
         values_key = BLOB_VALUES
     if values_key:
         return {ARRAY_VALUE: {values_key: list(value)}}
-    raise Exception(f'unsupported array type {type(value[0])}]: {value} ')
+    raise Exception(f"unsupported array type {type(value[0])}]: {value} ")
 
 
 def create_sql_parameter(key: str, value: Any) -> Dict[str, Any]:
@@ -170,20 +170,20 @@ def create_sql_parameter(key: str, value: Any) -> Dict[str, Any]:
         converted_value = {STRING_VALUE: str(value)}
         type_hint = DECIMAL_TYPE_HINT
     elif isinstance(value, datetime):
-        converted_value = {STRING_VALUE: value.strftime('%Y-%m-%d %H:%M:%S.%f')}
+        converted_value = {STRING_VALUE: value.strftime("%Y-%m-%d %H:%M:%S.%f")}
         type_hint = TIMESTAMP_TYPE_HINT
     elif isinstance(value, time):
-        converted_value = {STRING_VALUE: value.strftime('%H:%M:%S.%f')}
+        converted_value = {STRING_VALUE: value.strftime("%H:%M:%S.%f")}
         type_hint = TIME_TYPE_HINT
     elif isinstance(value, date):
-        converted_value = {STRING_VALUE: value.strftime('%Y-%m-%d')}
+        converted_value = {STRING_VALUE: value.strftime("%Y-%m-%d")}
         type_hint = DATE_TYPE_HINT
     else:
         # TODO: support structValue
         converted_value = {STRING_VALUE: str(value)}
     if type_hint:
-        return {'name': key, 'value': converted_value, 'typeHint': type_hint}
-    return {'name': key, 'value': converted_value}
+        return {"name": key, "value": converted_value, "typeHint": type_hint}
+    return {"name": key, "value": converted_value}
 
 
 def create_sql_parameters(
@@ -209,13 +209,13 @@ def _get_value_from_row(row: Dict[str, Any]) -> Any:
     return value
 
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class GeneratedFields:
     def __repr__(self) -> str:
-        values: str = ', '.join(str(f) for f in self.generated_fields)
-        return f'<{self.__class__.__name__}({values})>'
+        values: str = ", ".join(str(f) for f in self.generated_fields)
+        return f"<{self.__class__.__name__}({values})>"
 
     def __init__(self, generated_fields: List[Dict[str, Any]]):
         self._generated_fields_raw: List[Dict[str, Any]] = generated_fields
@@ -247,8 +247,8 @@ class GeneratedFields:
 
 class Record(Sequence, Iterator):
     def __repr__(self) -> str:
-        values: str = ', '.join(f'{k}={str(v)}' for k, v in self.dict().items())
-        return f'<{self.__class__.__name__}({values})>'
+        values: str = ", ".join(f"{k}={str(v)}" for k, v in self.dict().items())
+        return f"<{self.__class__.__name__}({values})>"
 
     def __next__(self) -> Any:
         self._index += 1
@@ -300,7 +300,7 @@ class Result(Sequence[Record], Iterator[Record], GeneratedFields):
 
     def __getitem__(  # type: ignore
         self, i: Union[int, slice]
-    ) -> Union['Record', List['Record']]:
+    ) -> Union["Record", List["Record"]]:
         if isinstance(i, slice):
             return [Record(r, self.headers) for r in self._rows[i]]
         return Record(self._rows[i], self.headers)  # type: ignore
@@ -322,26 +322,26 @@ class Result(Sequence[Record], Iterator[Record], GeneratedFields):
                         row, process_result_value_function_list
                     )
                 ]
-                for row in response.get('records', [])  # type: ignore
+                for row in response.get("records", [])  # type: ignore
             ]
         else:
             self._rows = [
                 [_get_value_from_row(column) for column in row]
-                for row in response.get('records', [])  # type: ignore
+                for row in response.get("records", [])  # type: ignore
             ]
-        self._column_metadata: List[Dict[str, Any]] = response.get('columnMetadata', [])
+        self._column_metadata: List[Dict[str, Any]] = response.get("columnMetadata", [])
         self._headers: Optional[List[str]] = None
         self._index: int = -1
-        super().__init__(response.get('generatedFields', []))
+        super().__init__(response.get("generatedFields", []))
 
     @property
     def number_of_records_updated(self) -> int:
-        return self._response.get('numberOfRecordsUpdated', 0)
+        return self._response.get("numberOfRecordsUpdated", 0)
 
     @property
     def headers(self) -> List[str]:
         if self._headers is None:
-            self._headers = [meta['label'] for meta in self._column_metadata]
+            self._headers = [meta["label"] for meta in self._column_metadata]
         return self._headers
 
     def first(self) -> Optional[Record]:
@@ -373,13 +373,13 @@ class Result(Sequence[Record], Iterator[Record], GeneratedFields):
 class UpdateResults(Sequence[GeneratedFields]):
     def __getitem__(  # type: ignore
         self, i: Union[int, slice]
-    ) -> Union['GeneratedFields', List['GeneratedFields']]:
+    ) -> Union["GeneratedFields", List["GeneratedFields"]]:
         if isinstance(i, slice):
             return [
-                GeneratedFields(r['generatedFields']) for r in self._update_results[i]
+                GeneratedFields(r["generatedFields"]) for r in self._update_results[i]
             ]
         return GeneratedFields(
-            self._update_results[i]['generatedFields']
+            self._update_results[i]["generatedFields"]
         )  # type: ignore
 
     def __len__(self) -> int:
@@ -394,7 +394,7 @@ class Options(BaseModel):
     secretArn: str
     sql: Optional[str]
     database: Optional[str]
-    schema_: Optional[str] = Field(None, alias='schema')
+    schema_: Optional[str] = Field(None, alias="schema")
     transactionId: Optional[str]
     continueAfterTimeout: Optional[bool]
     parameters: Optional[List[Dict[str, Any]]]
@@ -404,19 +404,19 @@ class Options(BaseModel):
     def validate_all(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         return {k: v for k, v in values.items() if v is not None}
 
-    @validator('parameters', pre=True)
+    @validator("parameters", pre=True)
     def convert_parameters(cls, v: Any) -> Any:
         if isinstance(v, Dict):
             return create_sql_parameters(v)
         return v
 
-    @validator('parameterSets', pre=True)
+    @validator("parameterSets", pre=True)
     def convert_parameter_sets(cls, v: Any) -> Any:
         if isinstance(v, (list, tuple)):  # pragma: no cover
             return [create_sql_parameters(parameter) for parameter in v]
         return v  # pragma: no cover
 
-    @validator('sql', pre=True)
+    @validator("sql", pre=True)
     def validate_sql(cls, v: Any) -> Any:
         if isinstance(v, str):
             return v
@@ -430,10 +430,10 @@ def find_arn_by_resource_name(
     resource_name: str, boto3_client: Optional[boto3.session.Session.client]
 ) -> str:
     if not boto3_client:
-        boto3_client = boto3.client('rds')
+        boto3_client = boto3.client("rds")
     return boto3_client.describe_db_clusters(DBClusterIdentifier=resource_name)[
-        'DBClusters'
-    ][0]['DBClusterArn']
+        "DBClusters"
+    ][0]["DBClusterArn"]
 
 
 class DataAPI(AbstractContextManager):
@@ -452,27 +452,28 @@ class DataAPI(AbstractContextManager):
         if resource_name:
             if resource_arn:
                 raise DataAPIError(
-                    f'resource_name should be set without resource_arn. resource_arn: {resource_arn},'
-                    f' resource_name: {resource_name}'
+                    f"resource_name should be set without resource_arn. resource_arn: {resource_arn},"
+                    f" resource_name: {resource_name}"
                 )
             resource_arn = find_arn_by_resource_name(resource_name, rds_client)
         if not resource_arn:
-            raise DataAPIError('Not Found resource_arn.')
+            raise DataAPIError("Not Found resource_arn.")
         self.resource_arn: str = resource_arn
         self.secret_arn: str = secret_arn
         self.database: Optional[str] = database
 
         client_kwargs = {}
-        region_name = resource_arn.split(':')[3]
-        if region_name:
-            client_kwargs['region_name'] = region_name
+        region_name = resource_arn.split(":")[3]
+        client_kwargs["region_name"] = region_name
 
         self._transaction_id: Optional[str] = transaction_id
-        self._client: boto3.session.Session.client = client or boto3.client('rds-data', **client_kwargs)
+        self._client: boto3.session.Session.client = client or boto3.client(
+            "rds-data", **client_kwargs
+        )
         self._transaction_status: Optional[str] = None
         self.rollback_exception: Optional[Type[Exception]] = rollback_exception
 
-    def __enter__(self) -> 'DataAPI':
+    def __enter__(self) -> "DataAPI":
         self.begin()
         return self
 
@@ -512,9 +513,9 @@ class DataAPI(AbstractContextManager):
         )
 
         response: Dict[str, str] = self.client.begin_transaction(**options.build())
-        self._transaction_id = response['transactionId']
+        self._transaction_id = response["transactionId"]
 
-        return response['transactionId']
+        return response["transactionId"]
 
     def commit(self, transaction_id: Optional[str] = None) -> str:
 
@@ -525,7 +526,7 @@ class DataAPI(AbstractContextManager):
         )
 
         response: Dict[str, str] = self.client.commit_transaction(**options.build())
-        self._transaction_status = response['transactionStatus']
+        self._transaction_status = response["transactionStatus"]
 
         return self._transaction_status
 
@@ -538,7 +539,7 @@ class DataAPI(AbstractContextManager):
         )
 
         response: Dict[str, str] = self.client.rollback_transaction(**options.build())
-        self._transaction_status = response['transactionStatus']
+        self._transaction_status = response["transactionStatus"]
 
         return self._transaction_status
 
@@ -567,9 +568,9 @@ class DataAPI(AbstractContextManager):
 
         if isinstance(query, (Query, Select)):
             process_result_value_function_list = create_process_result_value_function_list(
-                response.get('columnMetadata', []),
+                response.get("columnMetadata", []),
                 query,
-                QUERY_STATEMENT_COMPILE_PARAMS['dialect'],
+                QUERY_STATEMENT_COMPILE_PARAMS["dialect"],
             )
             return Result(response, process_result_value_function_list)
         return Result(response)

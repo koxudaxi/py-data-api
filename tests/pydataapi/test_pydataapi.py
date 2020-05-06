@@ -5,6 +5,11 @@ from typing import Any, Dict
 import pytest
 import sqlalchemy.types as types
 from pydantic import BaseModel, ValidationError
+from sqlalchemy import Column, Integer, String
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import Query
+from sqlalchemy.sql import Insert, Select
+
 from pydataapi.exceptions import DataAPIError, MultipleResultsFound, NoResultFound
 from pydataapi.pydataapi import (
     DataAPI,
@@ -19,10 +24,6 @@ from pydataapi.pydataapi import (
     generate_sql,
     transaction,
 )
-from sqlalchemy import Column, Integer, String
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import Query
-from sqlalchemy.sql import Insert, Select
 
 
 class MyType(types.TypeDecorator):

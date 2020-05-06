@@ -4,13 +4,14 @@ from typing import List
 
 import boto3
 import pytest
-from pydataapi import DataAPI, Result, transaction
-from pydataapi.pydataapi import Record
 from sqlalchemy import Column, DateTime, Integer, String, create_engine
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Query, sessionmaker
 from sqlalchemy.sql import Insert
+
+from pydataapi import DataAPI, Result, transaction
+from pydataapi.pydataapi import Record
 
 pytest_plugins = ["docker_compose"]
 

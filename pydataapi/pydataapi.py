@@ -5,6 +5,7 @@ from functools import wraps
 from typing import (
     Any,
     Callable,
+    ContextManager,
     Dict,
     Iterator,
     List,
@@ -437,7 +438,7 @@ def find_arn_by_resource_name(
     ][0]["DBClusterArn"]
 
 
-class DataAPI(AbstractContextManager["DataAPI"]):
+class DataAPI:
     def __init__(
         self,
         *,

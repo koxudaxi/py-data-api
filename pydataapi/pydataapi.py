@@ -19,12 +19,13 @@ from typing import (
 import boto3
 from more_itertools import chunked, flatten
 from pydantic import BaseModel, Field, root_validator, validator
-from pydataapi.exceptions import DataAPIError, MultipleResultsFound, NoResultFound
 from sqlalchemy import Column
 from sqlalchemy.dialects import mysql
 from sqlalchemy.engine import Dialect, default
 from sqlalchemy.orm.query import Query
 from sqlalchemy.sql import Delete, Insert, Select, Update
+
+from pydataapi.exceptions import DataAPIError, MultipleResultsFound, NoResultFound
 
 MAX_RECORDS: int = 1000
 
@@ -64,10 +65,10 @@ def generate_sql(query: Union[Query, Insert, Update, Delete, Select]) -> str:
 
 
 def wrap_process_result_value_function(
-    process_result_value: Callable, dialect: default.DefaultDialect
-) -> Callable:
+    process_result_value: Callable[..., Any], dialect: default.DefaultDialect
+) -> Callable[..., Any]:
     @wraps(process_result_value)
-    def wrapped(value: Any) -> Callable:
+    def wrapped(value: Any) -> Callable[..., Any]:
         return process_result_value(value, dialect)
 
     return wrapped
@@ -78,8 +79,8 @@ def get_process_result_value_function(
     column_name: str,
     query: Union[Select, Query],
     dialect: default.DefaultDialect,
-) -> Callable:
-    process_result_value: Optional[Callable] = None
+) -> Callable[..., Any]:
+    process_result_value: Optional[Callable[..., Any]] = None
     if isinstance(query, Select):  # pragma: no cover
         for column in query.columns:
             if column.name == column_name:
@@ -111,14 +112,14 @@ def create_process_result_value_function_list(
     column_metadata: List[Dict[str, Any]],
     query: Union[Select, Query],
     dialect: default.DefaultDialect,
-) -> List[Callable]:
+) -> List[Callable[..., Any]]:
     return [
         get_process_result_value_function(cm["tableName"], cm["name"], query, dialect)
         for cm in column_metadata
     ]
 
 
-def convert_array_value(value: Union[List, Tuple]) -> Dict[str, Any]:
+def convert_array_value(value: Union[List[Any], Tuple[Any, ...]]) -> Dict[str, Any]:
     first_value: Any = value[0]
     if isinstance(first_value, (list, tuple)):
         return {
@@ -188,7 +189,7 @@ def create_sql_parameter(key: str, value: Any) -> Dict[str, Any]:
 
 def create_sql_parameters(
     parameter: Dict[str, Any]
-) -> List[Dict[str, Union[str, Dict]]]:
+) -> List[Dict[str, Union[str, Dict[str, Any]]]]:
     return [create_sql_parameter(key, value) for key, value in parameter.items()]
 
 
@@ -199,7 +200,9 @@ def _get_value_from_row(row: Dict[str, Any]) -> Any:
     value = row[key]
     if key == ARRAY_VALUE:
         array_key: str = tuple(value.keys())[0]
-        array_value: Union[List[Dict[str, Dict]], Dict[str, List]] = value[array_key]
+        array_value: Union[
+            List[Dict[str, Dict[str, Any]]], Dict[str, List[Any]]
+        ] = value[array_key]
         if array_key == ARRAY_VALUES:
             return [
                 tuple(nested_value[ARRAY_VALUE].values())[0]  # type: ignore
@@ -219,10 +222,10 @@ class GeneratedFields:
 
     def __init__(self, generated_fields: List[Dict[str, Any]]):
         self._generated_fields_raw: List[Dict[str, Any]] = generated_fields
-        self._generated_fields: Optional[List] = None
+        self._generated_fields: Optional[List[str]] = None
 
     @property
-    def generated_fields(self) -> List:
+    def generated_fields(self) -> List[Any]:
         if self._generated_fields is None:
             self._generated_fields = [
                 _get_value_from_row(f) for f in self._generated_fields_raw
@@ -245,7 +248,7 @@ class GeneratedFields:
         return False
 
 
-class Record(Sequence, Iterator):
+class Record(Sequence[Any], Iterator[Any]):
     def __repr__(self) -> str:
         values: str = ", ".join(f"{k}={str(v)}" for k, v in self.dict().items())
         return f"<{self.__class__.__name__}({values})>"
@@ -257,24 +260,22 @@ class Record(Sequence, Iterator):
         except IndexError:
             raise StopIteration
 
-    def __getitem__(  # type: ignore
-        self, i: Union[int, slice]
-    ) -> Any:
-        return self._record[i]  # type: ignore
+    def __getitem__(self, i: Union[int, slice]) -> Any:
+        return self._record[i]
 
     def __len__(self) -> int:
         return len(self._record)
 
-    def __init__(self, row: List, headers: List[str]) -> None:
-        self._record: List = row
+    def __init__(self, row: List[Any], headers: List[str]) -> None:
+        self._record: List[Any] = row
         self._headers: List[str] = headers
         self._index: int = -1
 
     @property
-    def headers(self) -> List:
+    def headers(self) -> List[str]:
         return self._headers
 
-    def dict(self) -> Dict:
+    def dict(self) -> Dict[str, Any]:
         return {header: column for header, column in zip(self.headers, self._record)}
 
     def model(self, model_type: Type[T]) -> T:
@@ -290,44 +291,46 @@ class Record(Sequence, Iterator):
         return False
 
 
-class Result(Sequence[Record], Iterator[Record], GeneratedFields):
-    def __next__(self) -> Any:
+class Result(
+    Sequence[Union["Record", List["Record"]]],
+    Iterator[Union["Record", List["Record"]]],
+    GeneratedFields,
+):
+    def __next__(self) -> "Record":
         self._index += 1
         try:
-            return self[self._index]
+            return self[self._index]  # type: ignore
         except IndexError:
             raise StopIteration
 
-    def __getitem__(  # type: ignore
-        self, i: Union[int, slice]
-    ) -> Union["Record", List["Record"]]:
+    def __getitem__(self, i: Union[int, slice]) -> Union["Record", List["Record"]]:
         if isinstance(i, slice):
             return [Record(r, self.headers) for r in self._rows[i]]
-        return Record(self._rows[i], self.headers)  # type: ignore
+        return Record(self._rows[i], self.headers)
 
     def __len__(self) -> int:
         return len(self._rows)
 
     def __init__(
         self,
-        response: Dict,
-        process_result_value_function_list: Optional[List[Callable]] = None,
+        response: Dict[Any, Any],
+        process_result_value_function_list: Optional[List[Callable[..., Any]]] = None,
     ) -> None:
         self._response = response
         if process_result_value_function_list:
-            self._rows: Sequence[List] = [
+            self._rows: Sequence[List[Any]] = [
                 [
                     process_result_value(_get_value_from_row(column))
                     for column, process_result_value in zip(
                         row, process_result_value_function_list
                     )
                 ]
-                for row in response.get("records", [])  # type: ignore
+                for row in response.get("records", [])
             ]
         else:
             self._rows = [
                 [_get_value_from_row(column) for column in row]
-                for row in response.get("records", [])  # type: ignore
+                for row in response.get("records", [])
             ]
         self._column_metadata: List[Dict[str, Any]] = response.get("columnMetadata", [])
         self._headers: Optional[List[str]] = None
@@ -367,7 +370,7 @@ class Result(Sequence[Record], Iterator[Record], GeneratedFields):
         return self.one()[0]
 
     def all(self) -> List[Record]:
-        return list(self)
+        return list(self)  # type: ignore
 
 
 class UpdateResults(Sequence[GeneratedFields]):
@@ -378,9 +381,7 @@ class UpdateResults(Sequence[GeneratedFields]):
             return [
                 GeneratedFields(r["generatedFields"]) for r in self._update_results[i]
             ]
-        return GeneratedFields(
-            self._update_results[i]["generatedFields"]
-        )  # type: ignore
+        return GeneratedFields(self._update_results[i]["generatedFields"])
 
     def __len__(self) -> int:
         return len(self._update_results)
@@ -436,7 +437,7 @@ def find_arn_by_resource_name(
     ][0]["DBClusterArn"]
 
 
-class DataAPI(AbstractContextManager):
+class DataAPI(AbstractContextManager["DataAPI"]):
     def __init__(
         self,
         *,
@@ -558,7 +559,7 @@ class DataAPI(AbstractContextManager):
             database=database or self.database,
             transactionId=transaction_id or self.transaction_id,
             continueAfterTimeout=continue_after_timeout,
-            parameters=parameters,
+            parameters=parameters,  # type: ignore
             sql=query,
         )
 
@@ -597,7 +598,7 @@ class DataAPI(AbstractContextManager):
                             secretArn=self.secret_arn,
                             database=database or self.database,
                             transactionId=transaction_id or self.transaction_id,
-                            parameterSets=chunked_parameter_sets,
+                            parameterSets=chunked_parameter_sets,  # type: ignore
                             sql=query,
                         ).build()
                     )["updateResults"]
@@ -623,8 +624,8 @@ def transaction(
     transaction_id: Optional[str] = None,
     client: Optional[boto3.session.Session.client] = None,
     rollback_exception: Optional[Type[Exception]] = None,
-) -> Callable:
-    def get_func(func: Callable) -> Callable:
+) -> Callable[..., Any]:
+    def get_func(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
         def wrap(*args: Any, **kwargs: Any) -> Any:
             with DataAPI(

@@ -25,7 +25,7 @@ Other types (including types related to date and time)| STRING
 """
 
 # https://docs.oracle.com/javase/8/docs/api/constant-values.html#java.sql.Types
-JDBC_TYPES: Dict[int, Type] = {
+JDBC_TYPES: Dict[int, Type[Any]] = {
     # 2003: list # ARRAY  2003
     -5: int,  # BIGINT -5
     # BINARY  -2
@@ -68,7 +68,7 @@ JDBC_TYPES: Dict[int, Type] = {
 }
 
 
-def get_description(column_metadata: List[Dict[str, Any]]) -> Tuple:
+def get_description(column_metadata: List[Dict[str, Any]]) -> Tuple[Any, ...]:
     return tuple(
         (
             meta['label'],  # name
@@ -170,9 +170,9 @@ class Cursor:
 
         self.closed = False
 
-        self.description: Optional[List] = None
+        self.description: Optional[List[Any]] = None
 
-        self._rows: List[List] = []
+        self._rows: List[List[Any]] = []
         self._rowcount: int = -1
         self._lastrowid: Optional[int] = None
 
@@ -195,7 +195,7 @@ class Cursor:
         self.description = get_description(  # type: ignore
             getattr(result, '_column_metadata')
         )
-        rows: List[List] = getattr(result, '_rows')
+        rows: List[List[Any]] = getattr(result, '_rows')
         self._rows = rows
         self._rowcount = len(rows) or result.number_of_records_updated
         self._lastrowid = result.generated_fields_first  # type: ignore
@@ -209,23 +209,23 @@ class Cursor:
         self._rows = [result.generated_fields for result in results]
         self._rowcount = len(self._rows)
         self.description = []
-        self._lastrowid = (  # type: ignore
+        self._lastrowid = (
             results[-1].generated_fields_first if results else None  # type: ignore
         )
         return self
 
-    def fetchone(self) -> Optional[List]:
+    def fetchone(self) -> Optional[List[Any]]:
         try:
             return self._rows.pop(0)
         except IndexError:
             return None
 
-    def fetchmany(self, size: Optional[int] = None) -> List[List]:
+    def fetchmany(self, size: Optional[int] = None) -> List[List[Any]]:
         size = size or self.arraysize
         result, self._rows = self._rows[:size], self._rows[size:]
         return result
 
-    def fetchall(self) -> List[List]:
+    def fetchall(self) -> List[List[Any]]:
         rows = self._rows
         self._rows = []
         return rows
@@ -236,7 +236,7 @@ class Cursor:
     def setoutputsizes(self, sizes: Any) -> None:  # pragma: no cover
         pass
 
-    def __iter__(self) -> Iterator[List]:
+    def __iter__(self) -> Iterator[List[Any]]:
         return iter(self._rows)
 
 

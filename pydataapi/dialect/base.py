@@ -4,11 +4,12 @@ from abc import ABC
 from typing import Any, Callable, List, Optional, Pattern, Type, TypeVar, Union
 
 from botocore.exceptions import ClientError
-from pydataapi.dbapi import Connection
 from sqlalchemy import cast
 from sqlalchemy.engine.default import DefaultDialect
 from sqlalchemy.sql import sqltypes
 from sqlalchemy.sql.type_api import TypeEngine
+
+from pydataapi.dbapi import Connection
 
 
 class DataAPIDialect(DefaultDialect, ABC):
@@ -41,12 +42,12 @@ class DataAPIDialect(DefaultDialect, ABC):
 
 DatetimeProtocol = Union[datetime.date, datetime.datetime, datetime.time]
 
-DATE_PATTERN: Pattern = re.compile(r'^\d{4}-[0-1]\d-[0-3]\d$')
+DATE_PATTERN: Pattern[str] = re.compile(r'^\d{4}-[0-1]\d-[0-3]\d$')
 
-DATETIME_PATTERN: Pattern = re.compile(
+DATETIME_PATTERN: Pattern[str] = re.compile(
     r'^\d{4}-[0-1]\d-[0-3]\d [0-2]\d:[0-6]\d:[0-6]\d$'
 )
-DATETIME_MICROSECOND_PATTERN: Pattern = re.compile(
+DATETIME_MICROSECOND_PATTERN: Pattern[str] = re.compile(
     r'^\d{4}-[0-1]\d-[0-3]\d [0-2]\d:[0-6]\d:[0-6]\d\.\d{1,6}$'
 )
 
@@ -75,7 +76,7 @@ class DataAPIDatetimeBase:
     def bind_expression(self, value: Any) -> Any:
         return cast(value, self.db_type)
 
-    def bind_processor(self, dialect: DataAPIDialect) -> Callable:
+    def bind_processor(self, dialect: DataAPIDialect) -> Callable[..., Any]:
         def process_bind_value(value: Any) -> Any:
             if isinstance(value, self.python_type):
                 return value.strftime(DATETIME_MICROSECOND_FORMAT)
@@ -83,7 +84,7 @@ class DataAPIDatetimeBase:
 
         return process_bind_value
 
-    def result_processor(self, dialect: DataAPIDialect, coltype: List) -> Any:
+    def result_processor(self, dialect: DataAPIDialect, coltype: List[Any]) -> Any:
         def process_result_value(value: Any) -> Any:
             parsed_datetime = _parse_datetime(value)
             if parsed_datetime:

@@ -7,8 +7,7 @@ import sqlalchemy.types as types
 from pydantic import BaseModel, ValidationError
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import Query
-from sqlalchemy.sql import Insert, Select
+
 
 from pydataapi.exceptions import DataAPIError, MultipleResultsFound, NoResultFound
 from pydataapi.pydataapi import (
@@ -21,7 +20,6 @@ from pydataapi.pydataapi import (
     convert_array_value,
     create_sql_parameter,
     create_sql_parameters,
-    generate_sql,
     transaction,
 )
 
@@ -131,23 +129,6 @@ def test_convert_arrary_value_fail() -> None:
 
     with pytest.raises(Exception):
         convert_array_value([Dummy()])
-
-
-def test_generate_sql() -> None:
-    class Users(declarative_base()):
-        __tablename__ = 'users'
-        id = Column(Integer, primary_key=True, autoincrement=True)
-        name = Column(String(255, collation='utf8_unicode_ci'), default=None)
-
-    insert: Insert = Insert(Users, {'name': 'ken'})
-    assert generate_sql(insert) == "INSERT INTO users (name) VALUES ('ken')"
-
-    assert (
-        generate_sql(Query(Users).filter(Users.id == 1))
-        == "SELECT users.id, users.name \n"
-        "FROM users \n"
-        "WHERE users.id = 1"
-    )
 
 
 @pytest.mark.parametrize(
@@ -657,120 +638,6 @@ def test_execute_select(mocked_client, mocker) -> None:
     )
 
 
-def test_execute_select_process_result_value(mocked_client, mocker) -> None:
-    mocked_client.execute_statement.return_value = {
-        'numberOfRecordsUpdated': 0,
-        'records': [[{'longValue': 1}, {'stringValue': 'cat'}]],
-        'columnMetadata': [
-            {
-                "arrayBaseColumnType": 0,
-                "isAutoIncrement": False,
-                "isCaseSensitive": False,
-                "isCurrency": False,
-                "isSigned": True,
-                "label": "id",
-                "name": "id",
-                "nullable": 1,
-                "precision": 11,
-                "scale": 0,
-                "schemaName": "",
-                "tableName": "pets",
-                "type": 4,
-                "typeName": "INT",
-            },
-            {
-                "arrayBaseColumnType": 0,
-                "isAutoIncrement": False,
-                "isCaseSensitive": False,
-                "isCurrency": False,
-                "isSigned": False,
-                "label": "name",
-                "name": "name",
-                "nullable": 1,
-                "precision": 255,
-                "scale": 0,
-                "schemaName": "",
-                "tableName": "pets",
-                "type": 12,
-                "typeName": "VARCHAR",
-            },
-        ],
-    }
-    data_api = DataAPI(
-        resource_arn='arn:aws:rds:dummy',
-        secret_arn='dummy',
-        database='test',
-        client=mocked_client,
-    )
-    assert list(data_api.execute(Select([Pets]))[0]) == [1, 'my_type_cat']
-    assert mocked_client.execute_statement.call_args == mocker.call(
-        continueAfterTimeout=True,
-        database='test',
-        includeResultMetadata=True,
-        resourceArn='arn:aws:rds:dummy',
-        secretArn='dummy',
-        sql="""SELECT pets.id, pets.name 
-FROM pets""",
-    )
-
-
-def test_execute_query_process_result_value(mocked_client, mocker) -> None:
-    mocked_client.execute_statement.return_value = {
-        'numberOfRecordsUpdated': 0,
-        'records': [[{'longValue': 1}, {'stringValue': 'cat'}]],
-        'columnMetadata': [
-            {
-                "arrayBaseColumnType": 0,
-                "isAutoIncrement": False,
-                "isCaseSensitive": False,
-                "isCurrency": False,
-                "isSigned": True,
-                "label": "id",
-                "name": "id",
-                "nullable": 1,
-                "precision": 11,
-                "scale": 0,
-                "schemaName": "",
-                "tableName": "pets",
-                "type": 4,
-                "typeName": "INT",
-            },
-            {
-                "arrayBaseColumnType": 0,
-                "isAutoIncrement": False,
-                "isCaseSensitive": False,
-                "isCurrency": False,
-                "isSigned": False,
-                "label": "name",
-                "name": "name",
-                "nullable": 1,
-                "precision": 255,
-                "scale": 0,
-                "schemaName": "",
-                "tableName": "pets",
-                "type": 12,
-                "typeName": "VARCHAR",
-            },
-        ],
-    }
-    data_api = DataAPI(
-        resource_arn='arn:aws:rds:dummy',
-        secret_arn='dummy',
-        database='test',
-        client=mocked_client,
-    )
-    assert list(data_api.execute(Query(Pets))[0]) == [1, 'my_type_cat']
-    assert mocked_client.execute_statement.call_args == mocker.call(
-        continueAfterTimeout=True,
-        database='test',
-        includeResultMetadata=True,
-        resourceArn='arn:aws:rds:dummy',
-        secretArn='dummy',
-        sql="""SELECT pets.id, pets.name 
-FROM pets""",
-    )
-
-
 def test_execute_select_as_model(mocked_client, mocker) -> None:
     mocked_client.execute_statement.return_value = {
         "columnMetadata": [
@@ -835,34 +702,34 @@ def test_execute_select_as_model(mocked_client, mocker) -> None:
     )
 
 
-def test_execute_select_query(mocked_client, mocker) -> None:
-    class Users(declarative_base()):
-        __tablename__ = 'users'
-        id = Column(Integer, primary_key=True, autoincrement=True)
-        name = Column(String(255, collation='utf8_unicode_ci'), default=None)
-
-    mocked_client.execute_statement.return_value = {
-        'numberOfRecordsUpdated': 0,
-        'records': [[{'longValue': 1}, {'stringValue': 'cat'}]],
-    }
-    data_api = DataAPI(
-        resource_arn='arn:aws:rds:dummy',
-        secret_arn='dummy',
-        database='test',
-        client=mocked_client,
-    )
-    result = data_api.execute(Query(Users).filter(Users.id == 1))
-    assert len(result) == 1
-    assert list(result[0]) == [1, 'cat']
-
-    assert mocked_client.execute_statement.call_args == mocker.call(
-        continueAfterTimeout=True,
-        database='test',
-        includeResultMetadata=True,
-        resourceArn='arn:aws:rds:dummy',
-        secretArn='dummy',
-        sql='SELECT users.id, users.name \nFROM users \nWHERE users.id = 1',
-    )
+# def test_execute_select_query(mocked_client, mocker) -> None:
+#     class Users(declarative_base()):
+#         __tablename__ = 'users'
+#         id = Column(Integer, primary_key=True, autoincrement=True)
+#         name = Column(String(255, collation='utf8_unicode_ci'), default=None)
+#
+#     mocked_client.execute_statement.return_value = {
+#         'numberOfRecordsUpdated': 0,
+#         'records': [[{'longValue': 1}, {'stringValue': 'cat'}]],
+#     }
+#     data_api = DataAPI(
+#         resource_arn='arn:aws:rds:dummy',
+#         secret_arn='dummy',
+#         database='test',
+#         client=mocked_client,
+#     )
+#     result = data_api.execute(Query(Users).filter(Users.id == 1))
+#     assert len(result) == 1
+#     assert list(result[0]) == [1, 'cat']
+#
+#     assert mocked_client.execute_statement.call_args == mocker.call(
+#         continueAfterTimeout=True,
+#         database='test',
+#         includeResultMetadata=True,
+#         resourceArn='arn:aws:rds:dummy',
+#         secretArn='dummy',
+#         sql='SELECT users.id, users.name \nFROM users \nWHERE users.id = 1',
+#     )
 
 
 def test_execute_insert_parameter_set(mocked_client, mocker) -> None:

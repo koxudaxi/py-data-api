@@ -8,7 +8,6 @@ from pydantic import BaseModel, ValidationError
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
 
-
 from pydataapi.exceptions import DataAPIError, MultipleResultsFound, NoResultFound
 from pydataapi.pydataapi import (
     DataAPI,

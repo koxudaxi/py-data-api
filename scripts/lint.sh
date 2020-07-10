@@ -2,5 +2,5 @@
 set -e
 
 black pydataapi tests --check
-isort --recursive --check-only pydataapi tests
+isort --check-only pydataapi tests
 mypy pydataapi

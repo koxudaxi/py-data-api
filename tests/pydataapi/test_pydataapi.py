@@ -3,9 +3,9 @@ from decimal import Decimal
 from typing import Any, Dict
 
 import pytest
-import sqlalchemy.types as types
 from pydantic import BaseModel, ValidationError
 from sqlalchemy import Column, Integer, String
+from sqlalchemy import types as types
 from sqlalchemy.ext.declarative import declarative_base
 
 from pydataapi.exceptions import DataAPIError, MultipleResultsFound, NoResultFound

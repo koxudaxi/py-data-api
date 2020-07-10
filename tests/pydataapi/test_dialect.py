@@ -335,7 +335,7 @@ def test_mysql(mocked_client) -> None:
 
 
 def test_postgresql(mocked_client) -> None:
-    from sqlalchemy.dialects.postgresql import TIMESTAMP, DATE
+    from sqlalchemy.dialects.postgresql import DATE, TIMESTAMP
 
     class Pets(declarative_base()):
         __tablename__ = 'pets'

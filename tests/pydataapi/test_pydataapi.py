@@ -701,36 +701,6 @@ def test_execute_select_as_model(mocked_client, mocker) -> None:
     )
 
 
-# def test_execute_select_query(mocked_client, mocker) -> None:
-#     class Users(declarative_base()):
-#         __tablename__ = 'users'
-#         id = Column(Integer, primary_key=True, autoincrement=True)
-#         name = Column(String(255, collation='utf8_unicode_ci'), default=None)
-#
-#     mocked_client.execute_statement.return_value = {
-#         'numberOfRecordsUpdated': 0,
-#         'records': [[{'longValue': 1}, {'stringValue': 'cat'}]],
-#     }
-#     data_api = DataAPI(
-#         resource_arn='arn:aws:rds:dummy',
-#         secret_arn='dummy',
-#         database='test',
-#         client=mocked_client,
-#     )
-#     result = data_api.execute(Query(Users).filter(Users.id == 1))
-#     assert len(result) == 1
-#     assert list(result[0]) == [1, 'cat']
-#
-#     assert mocked_client.execute_statement.call_args == mocker.call(
-#         continueAfterTimeout=True,
-#         database='test',
-#         includeResultMetadata=True,
-#         resourceArn='arn:aws:rds:dummy',
-#         secretArn='dummy',
-#         sql='SELECT users.id, users.name \nFROM users \nWHERE users.id = 1',
-#     )
-
-
 def test_execute_insert_parameter_set(mocked_client, mocker) -> None:
     mocked_client.batch_execute_statement.return_value = {
         'updateResults': [

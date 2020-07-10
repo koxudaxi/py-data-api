@@ -13,7 +13,7 @@
       
       
       <link rel="shortcut icon" href="assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-5.3.2">
+      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-5.4.0">
     
     
       
@@ -510,11 +510,10 @@
 <a href="https://codecov.io/gh/koxudaxi/py-data-api"><img alt="codecov" src="https://codecov.io/gh/koxudaxi/py-data-api/branch/master/graph/badge.svg" /></a>
 <img alt="license" src="https://img.shields.io/github/license/koxudaxi/py-data-api.svg" />
 <a href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg" /></a></p>
-<p>py-data-api is a user-friendly client which supports SQLAlchemy models.
-Also, the package includes DB API 2.0 Client and SQLAlchemy Dialects.</p>
+<p>py-data-api is a client for Data API of <a href="https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/data-api.html">Aurora Serverless</a>.
+Also, the package includes SQLAlchemy Dialects and DB API 2.0 Client.</p>
 <h2 id="features">Features</h2>
 <ul>
-<li>A user-friendly client which supports SQLAlchemy models</li>
 <li>SQLAlchemy Dialects</li>
 <li>DB API 2.0 compatible client <a href="https://www.python.org/dev/peps/pep-0249/">PEP 249</a></li>
 </ul>
@@ -538,10 +537,8 @@ Also, the package includes DB API 2.0 Client and SQLAlchemy Dialects.</p>
 
 <span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="kn">import</span> <span class="n">Column</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">String</span>
 <span class="kn">from</span> <span class="nn">sqlalchemy.ext.declarative</span> <span class="kn">import</span> <span class="n">declarative_base</span>
-<span class="kn">from</span> <span class="nn">sqlalchemy.orm</span> <span class="kn">import</span> <span class="n">Query</span>
-<span class="kn">from</span> <span class="nn">sqlalchemy.sql</span> <span class="kn">import</span> <span class="n">Insert</span>
 
-<span class="kn">from</span> <span class="nn">pydataapi</span> <span class="kn">import</span> <span class="n">DataAPI</span><span class="p">,</span> <span class="n">transaction</span><span class="p">,</span> <span class="n">Result</span><span class="p">,</span> <span class="n">Record</span>
+<span class="kn">from</span> <span class="nn">pydataapi</span> <span class="kn">import</span> <span class="n">DataAPI</span><span class="p">,</span> <span class="n">Result</span>
 
 
 <span class="k">class</span> <span class="nc">Pets</span><span class="p">(</span><span class="n">declarative_base</span><span class="p">()):</span>
@@ -554,115 +551,6 @@ Also, the package includes DB API 2.0 Client and SQLAlchemy Dialects.</p>
 <span class="n">resource_arn</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;arn:aws:rds:us-east-1:123456789012:cluster:serverless-test-1&#39;</span>
 <span class="n">secret_arn</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;arn:aws:secretsmanager:us-east-1:123456789012:secret:serverless-test1&#39;</span>
 
-
-<span class="k">def</span> <span class="nf">example_with_statement</span><span class="p">():</span>
-    <span class="c1"># DataAPI supports with statement for handling transaction</span>
-    <span class="k">with</span> <span class="n">DataAPI</span><span class="p">(</span><span class="n">database</span><span class="o">=</span><span class="n">database</span><span class="p">,</span> <span class="n">resource_arn</span><span class="o">=</span><span class="n">resource_arn</span><span class="p">,</span> <span class="n">secret_arn</span><span class="o">=</span><span class="n">secret_arn</span><span class="p">)</span> <span class="k">as</span> <span class="n">data_api</span><span class="p">:</span>
-
-        <span class="c1"># start transaction</span>
-
-        <span class="n">insert</span><span class="p">:</span> <span class="n">Insert</span> <span class="o">=</span> <span class="n">Insert</span><span class="p">(</span><span class="n">Pets</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;dog&#39;</span><span class="p">})</span>
-        <span class="c1"># INSERT INTO pets (name) VALUES (&#39;dog&#39;)</span>
-
-        <span class="c1"># `execute` accepts SQL statement as str or SQL Alchemy SQL objects</span>
-        <span class="n">result</span><span class="p">:</span> <span class="n">Result</span> <span class="o">=</span> <span class="n">data_api</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">insert</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">number_of_records_updated</span><span class="p">)</span>
-        <span class="c1"># 1</span>
-
-        <span class="n">query</span> <span class="o">=</span> <span class="n">Query</span><span class="p">(</span><span class="n">Pets</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">Pets</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="n">result</span><span class="p">:</span> <span class="n">Result</span> <span class="o">=</span> <span class="n">data_api</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>  <span class="c1"># or data_api.execute(&#39;select id, name from pets&#39;)</span>
-        <span class="c1"># SELECT pets.id, pets.name FROM pets WHERE pets.id = 1</span>
-
-        <span class="c1"># `Result` like a Result object in SQL Alchemy</span>
-        <span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">scalar</span><span class="p">())</span>
-        <span class="c1"># 1</span>
-
-        <span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">one</span><span class="p">())</span>
-        <span class="c1"># [Record&lt;id=1, name=&#39;dog&#39;&gt;]</span>
-
-        <span class="c1"># `Result` is Sequence[Record]</span>
-        <span class="n">records</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Record</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="n">records</span><span class="p">)</span>
-        <span class="c1"># [Record&lt;id=1, name=&#39;dog&#39;&gt;]</span>
-
-        <span class="c1"># Record is Sequence and Iterator</span>
-        <span class="n">record</span> <span class="o">=</span> <span class="n">records</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="nb">print</span><span class="p">(</span><span class="n">record</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-        <span class="c1"># 1</span>
-        <span class="nb">print</span><span class="p">(</span><span class="n">record</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
-        <span class="c1"># dog</span>
-
-        <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">record</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="n">column</span><span class="p">)</span>
-            <span class="c1"># 1 ...</span>
-
-        <span class="c1"># show record as dict()</span>
-        <span class="nb">print</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">dict</span><span class="p">())</span>
-        <span class="c1"># {&#39;id&#39;: 1, &#39;name&#39;: &#39;dog&#39;}</span>
-
-        <span class="c1"># batch insert</span>
-        <span class="n">insert</span><span class="p">:</span> <span class="n">Insert</span> <span class="o">=</span> <span class="n">Insert</span><span class="p">(</span><span class="n">Pets</span><span class="p">)</span>
-        <span class="n">data_api</span><span class="o">.</span><span class="n">batch_execute</span><span class="p">(</span><span class="n">insert</span><span class="p">,</span> <span class="p">[</span>
-            <span class="p">{</span><span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;cat&#39;</span><span class="p">},</span>
-            <span class="p">{</span><span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;snake&#39;</span><span class="p">},</span>
-            <span class="p">{</span><span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;rabbit&#39;</span><span class="p">},</span>
-        <span class="p">])</span>
-
-        <span class="n">result</span> <span class="o">=</span> <span class="n">data_api</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;select * from pets&#39;</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">result</span><span class="p">))</span>
-        <span class="c1"># [Record&lt;id=1, name=&#39;dog&#39;&gt;, Record&lt;id=2, name=&#39;cat&#39;&gt;, Record&lt;id=3, name=&#39;snake&#39;&gt;, Record&lt;id=4, name=&#39;rabbit&#39;&gt;]</span>
-
-        <span class="c1"># result is a sequence object</span>
-        <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">result</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="n">record</span><span class="p">)</span>
-            <span class="c1"># Record&lt;id=1, name=&#39;dog&#39;&gt; ...</span>
-
-        <span class="c1"># commit</span>
-
-
-<span class="k">def</span> <span class="nf">example_decorator</span><span class="p">():</span>
-    <span class="n">pet_names</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;dog&#39;</span><span class="p">,</span> <span class="s1">&#39;cat&#39;</span><span class="p">,</span> <span class="s1">&#39;snake&#39;</span><span class="p">]</span>
-    <span class="n">add_pets</span><span class="p">(</span><span class="n">pet_names</span><span class="p">)</span>
-
-
-<span class="nd">@transaction</span><span class="p">(</span><span class="n">database</span><span class="o">=</span><span class="n">database</span><span class="p">,</span> <span class="n">resource_arn</span><span class="o">=</span><span class="n">resource_arn</span><span class="p">,</span> <span class="n">secret_arn</span><span class="o">=</span><span class="n">secret_arn</span><span class="p">)</span>
-<span class="k">def</span> <span class="nf">add_pets</span><span class="p">(</span><span class="n">data_api</span><span class="p">:</span> <span class="n">DataAPI</span><span class="p">,</span> <span class="n">pet_names</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="c1"># start transaction</span>
-    <span class="k">for</span> <span class="n">pet_name</span> <span class="ow">in</span> <span class="n">pet_names</span><span class="p">:</span>
-        <span class="n">data_api</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">Insert</span><span class="p">(</span><span class="n">Pets</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">pet_name</span><span class="p">}))</span>
-        <span class="c1"># some logic ...</span>
-
-    <span class="c1"># commit</span>
-
-
-<span class="k">def</span> <span class="nf">example_simple_execute</span><span class="p">():</span>
-    <span class="n">data_api</span> <span class="o">=</span> <span class="n">DataAPI</span><span class="p">(</span><span class="n">resource_arn</span><span class="o">=</span><span class="n">resource_arn</span><span class="p">,</span> <span class="n">secret_arn</span><span class="o">=</span><span class="n">secret_arn</span><span class="p">,</span> <span class="n">database</span><span class="o">=</span><span class="n">database</span><span class="p">)</span>
-    <span class="n">result</span><span class="p">:</span> <span class="n">Result</span> <span class="o">=</span> <span class="n">data_api</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;show tables&#39;</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">scalar</span><span class="p">())</span>
-    <span class="c1"># Pets</span>
-
-
-<span class="k">def</span> <span class="nf">example_rollback</span><span class="p">():</span>
-    <span class="k">with</span> <span class="n">DataAPI</span><span class="p">(</span><span class="n">resource_arn</span><span class="o">=</span><span class="n">resource_arn</span><span class="p">,</span> <span class="n">secret_arn</span><span class="o">=</span><span class="n">secret_arn</span><span class="p">)</span> <span class="k">as</span> <span class="n">data_api</span><span class="p">:</span>
-        <span class="n">data_api</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">Insert</span><span class="p">(</span><span class="n">Pets</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;dog&#39;</span><span class="p">}))</span>
-        <span class="c1"># you can rollback by Exception</span>
-        <span class="k">raise</span> <span class="ne">Exception</span>
-
-
-<span class="k">def</span> <span class="nf">example_rollback_with_custom_exception</span><span class="p">():</span>
-    <span class="k">class</span> <span class="nc">OriginalError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
-        <span class="k">pass</span>
-
-    <span class="k">with</span> <span class="n">DataAPI</span><span class="p">(</span><span class="n">resource_arn</span><span class="o">=</span><span class="n">resource_arn</span><span class="p">,</span> <span class="n">secret_arn</span><span class="o">=</span><span class="n">secret_arn</span><span class="p">,</span> <span class="n">rollback_exception</span><span class="o">=</span><span class="n">OriginalError</span><span class="p">)</span> <span class="k">as</span> <span class="n">data_api</span><span class="p">:</span>
-
-        <span class="n">data_api</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">Insert</span><span class="p">(</span><span class="n">Pets</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;dog&#39;</span><span class="p">}))</span>
-        <span class="c1"># some logic ...</span>
-
-        <span class="c1"># rollback when happen `rollback_exception`</span>
-        <span class="k">raise</span> <span class="n">OriginalError</span>  <span class="c1"># rollback</span>
-
-        <span class="c1"># raise Exception &lt;- DataAPI don&#39;t rollback</span>
-
 <span class="k">def</span> <span class="nf">example_driver_for_sqlalchemy</span><span class="p">():</span>
     <span class="kn">from</span> <span class="nn">sqlalchemy.engine</span> <span class="kn">import</span> <span class="n">create_engine</span>
     <span class="n">engine</span> <span class="o">=</span> <span class="n">create_engine</span><span class="p">(</span>
@@ -673,8 +561,14 @@ Also, the package includes DB API 2.0 Client and SQLAlchemy Dialects.</p>
             <span class="s1">&#39;database&#39;</span><span class="p">:</span> <span class="s1">&#39;test&#39;</span><span class="p">}</span>
     <span class="p">)</span>
 
-    <span class="n">result</span><span class="p">:</span> <span class="n">ResultProxy</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;select * from pets&quot;</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;select * from pets&quot;</span><span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">fetchall</span><span class="p">())</span>
+
+<span class="k">def</span> <span class="nf">example_simple_execute</span><span class="p">():</span>
+    <span class="n">data_api</span> <span class="o">=</span> <span class="n">DataAPI</span><span class="p">(</span><span class="n">resource_arn</span><span class="o">=</span><span class="n">resource_arn</span><span class="p">,</span> <span class="n">secret_arn</span><span class="o">=</span><span class="n">secret_arn</span><span class="p">,</span> <span class="n">database</span><span class="o">=</span><span class="n">database</span><span class="p">)</span>
+    <span class="n">result</span><span class="p">:</span> <span class="n">Result</span> <span class="o">=</span> <span class="n">data_api</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;show tables&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">scalar</span><span class="p">())</span>
+    <span class="c1"># Pets</span>
 </code></pre></div>
 
 
@@ -747,14 +641,14 @@ Also, the package includes DB API 2.0 Client and SQLAlchemy Dialects.</p>
     </div>
     
       <script src="assets/javascripts/vendor.d710d30a.min.js"></script>
-      <script src="assets/javascripts/bundle.7f4f3c92.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents"}</script>
+      <script src="assets/javascripts/bundle.b39636ac.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents"}</script>
       
       <script>
         app = initialize({
           base: ".",
           features: [],
           search: Object.assign({
-            worker: "assets/javascripts/worker/search.9b3611bd.min.js"
+            worker: "assets/javascripts/worker/search.a68abb33.min.js"
           }, typeof search !== "undefined" && search)
         })
       </script>

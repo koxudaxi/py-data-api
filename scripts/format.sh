@@ -2,4 +2,4 @@
 set -e
 
 black pydataapi tests
-isort --recursive pydataapi tests
+isort pydataapi tests

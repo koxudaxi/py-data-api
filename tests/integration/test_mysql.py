@@ -7,8 +7,7 @@ import pytest
 from sqlalchemy import Column, DateTime, Integer, String, create_engine
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import Query, sessionmaker
-from sqlalchemy.sql import Insert
+from sqlalchemy.orm import sessionmaker
 
 from pydataapi import DataAPI, Result, transaction
 from pydataapi.pydataapi import Record
@@ -93,9 +92,13 @@ def test_decorator(rds_data_client, db_connection):
         client=rds_data_client,
     )
     def add_pet(data_api: DataAPI, pet_names: List[str]) -> None:
-        response = data_api.execute(Insert(Pets, {'name': pet_names[0]}))
+        response = data_api.execute(
+            'INSERT INTO pets (name) VALUES (:name)', {'name': pet_names[0]}
+        )
         assert response.generated_fields_first == 1
-        response = data_api.execute(Insert(Pets, {'name': pet_names[1]}))
+        response = data_api.execute(
+            'INSERT INTO pets (name) VALUES (:name)', {'name': pet_names[1]}
+        )
         assert response.generated_fields_first == 2
 
     pet_names: List[str] = ['dog', 'cat']
@@ -112,12 +115,13 @@ def test_with_statement(rds_data_client, db_connection):
         secret_arn=secret_arn,
         client=rds_data_client,
     ) as data_api:
-        insert: Insert = Insert(Pets, {'name': 'dog'})
-
-        result = data_api.execute(insert)
+        result = data_api.execute(
+            'INSERT INTO pets (name) VALUES (:name)', {'name': 'dog'}
+        )
         assert result.number_of_records_updated == 1
 
-        query = Query(Pets).filter(Pets.id == 1)
+        query = 'SELECT pets.id AS pets_id, pets.name AS pets_name, pets.seen_at AS pets_seen_at FROM pets WHERE pets.id = 1'
+
         result = data_api.execute(query)
 
         assert list(result) == [Record([1, 'dog', None], [])]
@@ -126,9 +130,8 @@ def test_with_statement(rds_data_client, db_connection):
         assert result.one().dict() == {'id': 1, 'name': 'dog', 'seen_at': None}
 
         # This is deprecated. SQL Alchemy object will be no longer supported
-        insert: Insert = Insert(Pets)
         data_api.batch_execute(
-            insert,
+            'INSERT INTO pets (id, name, seen_at) VALUES (:id, :name, :seen_at)',
             [
                 {'id': 2, 'seen_at': '2020-01-02 03:04:05.678912', 'name': 'cat'},
                 {'id': 3, 'name': 'snake', 'seen_at': '2020-01-02 03:04:05.678912'},
@@ -156,7 +159,7 @@ def test_with_statement(rds_data_client, db_connection):
 def test_rollback(rds_data_client, db_connection):
     try:
         with DataAPI(resource_arn=resource_arn, secret_arn=secret_arn) as data_api:
-            data_api.execute(Insert(Pets, {'name': 'dog'}))
+            data_api.execute('INSERT INTO pets (name) VALUES (:name)', {'name': 'dog'})
             # you can rollback by Exception
             raise Exception
     except:
@@ -187,7 +190,7 @@ def test_rollback_with_custom_exception(db_connection):
             database=database,
             client=rds_data_client,
         ) as data_api:
-            data_api.execute(Insert(Pets, {'name': 'dog'}))
+            data_api.execute('INSERT INTO pets (name) VALUES (:name)', {'name': 'dog'})
             raise OriginalError  # rollback
     except:
         pass
@@ -202,7 +205,7 @@ def test_rollback_with_custom_exception(db_connection):
             database=database,
             client=rds_data_client,
         ) as data_api:
-            data_api.execute(Insert(Pets, {'name': 'dog'}))
+            data_api.execute('INSERT INTO pets (name) VALUES (:name)', {'name': 'dog'})
             raise OtherError
     except:
         pass

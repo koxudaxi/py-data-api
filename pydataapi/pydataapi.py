@@ -1,11 +1,9 @@
-from contextlib import AbstractContextManager
 from datetime import date, datetime, time
 from decimal import Decimal
 from functools import wraps
 from typing import (
     Any,
     Callable,
-    ContextManager,
     Dict,
     Iterator,
     List,
@@ -23,8 +21,6 @@ from pydantic import BaseModel, Field, root_validator, validator
 from sqlalchemy import Column
 from sqlalchemy.dialects import mysql
 from sqlalchemy.engine import Dialect, default
-from sqlalchemy.orm.query import Query
-from sqlalchemy.sql import Delete, Insert, Select, Update
 
 from pydataapi.exceptions import DataAPIError, MultipleResultsFound, NoResultFound
 
@@ -55,69 +51,6 @@ DECIMAL_TYPE_HINT: str = "DECIMAL"
 TIMESTAMP_TYPE_HINT: str = "TIMESTAMP"
 TIME_TYPE_HINT: str = "TIME"
 DATE_TYPE_HINT: str = "DATE"
-
-
-def generate_sql(query: Union[Query, Insert, Update, Delete, Select]) -> str:
-    if hasattr(query, "statement"):
-        sql: str = query.statement.compile(**QUERY_STATEMENT_COMPILE_PARAMS)
-    else:
-        sql = query.compile(**QUERY_STATEMENT_COMPILE_PARAMS)
-    return str(sql)
-
-
-def wrap_process_result_value_function(
-    process_result_value: Callable[..., Any], dialect: default.DefaultDialect
-) -> Callable[..., Any]:
-    @wraps(process_result_value)
-    def wrapped(value: Any) -> Callable[..., Any]:
-        return process_result_value(value, dialect)
-
-    return wrapped
-
-
-def get_process_result_value_function(
-    table_name: str,
-    column_name: str,
-    query: Union[Select, Query],
-    dialect: default.DefaultDialect,
-) -> Callable[..., Any]:
-    process_result_value: Optional[Callable[..., Any]] = None
-    if isinstance(query, Select):  # pragma: no cover
-        for column in query.columns:
-            if column.name == column_name:
-                process_result_value = getattr(
-                    column.type, "process_result_value", None
-                )
-                break
-    elif isinstance(query, Query):  # pragma: no cover
-        for column_description in query.column_descriptions:
-            type_ = column_description["type"]
-            if type_.__tablename__ == table_name:
-                column = getattr(type_, column_name, None)
-                if column:
-                    expression = getattr(column, "expression", None)
-                    if (
-                        isinstance(expression, Column)
-                        and expression.name == column_name
-                    ):
-                        process_result_value = getattr(
-                            expression.type, "process_result_value", None
-                        )
-                break
-    if process_result_value:
-        return wrap_process_result_value_function(process_result_value, dialect)
-    return lambda v: v
-
-
-def create_process_result_value_function_list(
-    column_metadata: List[Dict[str, Any]],
-    query: Union[Select, Query],
-    dialect: default.DefaultDialect,
-) -> List[Callable[..., Any]]:
-    return [
-        get_process_result_value_function(cm["tableName"], cm["name"], query, dialect)
-        for cm in column_metadata
-    ]
 
 
 def convert_array_value(value: Union[List[Any], Tuple[Any, ...]]) -> Dict[str, Any]:
@@ -312,27 +245,12 @@ class Result(
     def __len__(self) -> int:
         return len(self._rows)
 
-    def __init__(
-        self,
-        response: Dict[Any, Any],
-        process_result_value_function_list: Optional[List[Callable[..., Any]]] = None,
-    ) -> None:
+    def __init__(self, response: Dict[Any, Any],) -> None:
         self._response = response
-        if process_result_value_function_list:
-            self._rows: Sequence[List[Any]] = [
-                [
-                    process_result_value(_get_value_from_row(column))
-                    for column, process_result_value in zip(
-                        row, process_result_value_function_list
-                    )
-                ]
-                for row in response.get("records", [])
-            ]
-        else:
-            self._rows = [
-                [_get_value_from_row(column) for column in row]
-                for row in response.get("records", [])
-            ]
+        self._rows = [
+            [_get_value_from_row(column) for column in row]
+            for row in response.get("records", [])
+        ]
         self._column_metadata: List[Dict[str, Any]] = response.get("columnMetadata", [])
         self._headers: Optional[List[str]] = None
         self._index: int = -1
@@ -417,12 +335,6 @@ class Options(BaseModel):
         if isinstance(v, (list, tuple)):  # pragma: no cover
             return [create_sql_parameters(parameter) for parameter in v]
         return v  # pragma: no cover
-
-    @validator("sql", pre=True)
-    def validate_sql(cls, v: Any) -> Any:
-        if isinstance(v, str):
-            return v
-        return generate_sql(v)
 
     def build(self) -> Dict[str, Any]:
         return self.dict(exclude_unset=True, by_alias=True)
@@ -547,7 +459,7 @@ class DataAPI:
 
     def execute(
         self,
-        query: Union[Query, Insert, Update, Delete, Select, str],
+        query: str,
         parameters: Optional[Dict[str, Any]] = None,
         transaction_id: Optional[str] = None,
         continue_after_timeout: bool = True,
@@ -568,18 +480,11 @@ class DataAPI:
             includeResultMetadata=True, **options.build()
         )
 
-        if isinstance(query, (Query, Select)):
-            process_result_value_function_list = create_process_result_value_function_list(
-                response.get("columnMetadata", []),
-                query,
-                QUERY_STATEMENT_COMPILE_PARAMS["dialect"],
-            )
-            return Result(response, process_result_value_function_list)
         return Result(response)
 
     def batch_execute(
         self,
-        query: Union[Query, Insert, Update, Delete, Select, str],
+        query: str,
         parameter_sets: Optional[List[Dict[str, Any]]],
         transaction_id: Optional[str] = None,
         database: Optional[str] = None,

@@ -245,7 +245,10 @@ class Result(
     def __len__(self) -> int:
         return len(self._rows)
 
-    def __init__(self, response: Dict[Any, Any],) -> None:
+    def __init__(
+        self,
+        response: Dict[Any, Any],
+    ) -> None:
         self._response = response
         self._rows = [
             [_get_value_from_row(column) for column in row]

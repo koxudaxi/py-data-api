@@ -109,7 +109,8 @@ class DataAPIDialectMixin:
             return super().has_table(connection, table_name, schema)  # type: ignore
         except ClientError as e:
             if re.match(
-                r"Table '.+' doesn't exist", e.response['Error']['Message']
+                r"(\(conn=\d+\) )?Table '.+' doesn't exist",
+                e.response['Error']['Message'],
             ):  # pragma: no cover
                 return False
             raise  # pragma: no cover

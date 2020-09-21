@@ -365,6 +365,7 @@ class DataAPI:
         client: Optional[boto3.session.Session.client] = None,
         rollback_exception: Optional[Type[Exception]] = None,
         rds_client: Optional[boto3.session.Session.client] = None,
+        auto_transaction: Optional[bool] = None,
     ) -> None:
         if resource_name:
             if resource_arn:
@@ -389,6 +390,7 @@ class DataAPI:
         )
         self._transaction_status: Optional[str] = None
         self.rollback_exception: Optional[Type[Exception]] = rollback_exception
+        self._auto_transaction: Optional[bool] = auto_transaction
 
     def __enter__(self) -> "DataAPI":
         self.begin()
@@ -417,6 +419,10 @@ class DataAPI:
     @property
     def transaction_status(self) -> Optional[str]:
         return self._transaction_status
+
+    @property
+    def auto_transaction(self) -> Optional[bool]:
+        return self._auto_transaction
 
     def begin(
         self, database: Optional[str] = None, schema: Optional[str] = None

@@ -353,3 +353,59 @@ def test_with_statement_custom_exception(mocked_client, mocker) -> None:
             )
             raise Exception('error')
     second_mocked_client.rollback_transaction.assert_not_called()
+
+
+def test_execute_select_w_auto_transaction(mocked_client, mocker) -> None:
+    mocked_client.begin_transaction.return_value = {'transactionId': 'abc'}
+    mocked_client.execute_statement.return_value = {
+        'numberOfRecordsUpdated': 0,
+        'records': [[{'longValue': 1}, {'stringValue': 'cat'}]],
+    }
+    data_api = connect(
+        resource_arn='arn:aws:rds:dummy',
+        secret_arn='dummy',
+        database='test',
+        client=mocked_client,
+    )
+    result = data_api.execute("select * from pets")
+    assert result.rowcount == 1
+    assert result.fetchone() == [1, 'cat']
+    assert result.fetchone() is None
+    assert mocked_client.execute_statement.call_args == mocker.call(
+        continueAfterTimeout=True,
+        includeResultMetadata=True,
+        resourceArn='arn:aws:rds:dummy',
+        secretArn='dummy',
+        sql="select * from pets",
+        database='test',
+        transactionId='abc',
+    )
+    mocked_client.begin_transaction.assert_called_once()
+
+
+def test_execute_select_wo_auto_transaction(mocked_client, mocker) -> None:
+    mocked_client.begin_transaction.return_value = {'transactionId': 'abc'}
+    mocked_client.execute_statement.return_value = {
+        'numberOfRecordsUpdated': 0,
+        'records': [[{'longValue': 1}, {'stringValue': 'cat'}]],
+    }
+    data_api = connect(
+        resource_arn='arn:aws:rds:dummy',
+        secret_arn='dummy',
+        database='test',
+        client=mocked_client,
+        auto_transaction=False,
+    )
+    result = data_api.execute("select * from pets")
+    assert result.rowcount == 1
+    assert result.fetchone() == [1, 'cat']
+    assert result.fetchone() is None
+    assert mocked_client.execute_statement.call_args == mocker.call(
+        continueAfterTimeout=True,
+        database='test',
+        includeResultMetadata=True,
+        resourceArn='arn:aws:rds:dummy',
+        secretArn='dummy',
+        sql='select * from pets',
+    )
+    mocked_client.begin_transaction.assert_not_called()

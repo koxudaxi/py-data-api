@@ -96,6 +96,7 @@ class ConnectArgs(BaseModel):
     client: Optional[Any] = None
     rollback_exception: Optional[Type[Exception]] = None
     rds_client: Optional[Any] = None
+    auto_transaction: Optional[bool] = True
 
 
 class Connection:
@@ -113,6 +114,7 @@ class Connection:
             client=connect_args.client,
             rollback_exception=connect_args.rollback_exception,
             rds_client=connect_args.rds_client,
+            auto_transaction=connect_args.auto_transaction,
         )
 
         self.closed = False
@@ -132,7 +134,7 @@ class Connection:
             self._data_api._transaction_id = None
 
     def cursor(self) -> 'Cursor':
-        if not self._data_api.transaction_id:
+        if not self._data_api.transaction_id and self._data_api.auto_transaction:
             self._data_api.begin()
         cursor = Cursor(self._data_api)
         self.cursors.append(cursor)

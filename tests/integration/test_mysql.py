@@ -249,3 +249,7 @@ def test_dialect(create_table) -> None:
         'dog',
         '2020-01-02 03:04:05.678912',
     )
+
+    # Check that the queried back dog is correct.
+    the_dog = session.query(Pets).filter_by(id=dog.id).one()
+    assert the_dog.seen_at == datetime(2020, 1, 2, 3, 4, 5, 678912)

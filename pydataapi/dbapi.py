@@ -166,7 +166,7 @@ class Connection:
 
     @staticmethod
     def Binary(x: Any) -> Any:
-        return x
+        return x  # pragma: no cover
 
 
 class Cursor:

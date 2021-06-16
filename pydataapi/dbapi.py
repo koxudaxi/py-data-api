@@ -164,6 +164,10 @@ class Connection:
             else:
                 self.rollback()
 
+    @staticmethod
+    def Binary(x: Any) -> Any:
+        return x  # pragma: no cover
+
 
 class Cursor:
     def __init__(self, data_api: DataAPI) -> None:

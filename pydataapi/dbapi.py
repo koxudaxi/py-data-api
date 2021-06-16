@@ -165,7 +165,7 @@ class Connection:
                 self.rollback()
 
     @staticmethod
-    def Binary(x):
+    def Binary(x: Any) -> Any:
         return x
 
 
